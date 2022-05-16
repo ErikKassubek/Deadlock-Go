@@ -13,7 +13,7 @@ type Routine struct {
 }
 
 // Initialize the go routine
-func InitializeRoutine() *Routine {
+func NewRoutine() *Routine {
 	r := Routine{
 		lockSet: make([]*Mutex, 0),
 		context: make(map[*Mutex]callerInfo)}
