@@ -7,7 +7,7 @@ func Initialize() {
 
 // Lock mutex m in routine r
 // TODO: change so that r is calculated and taken from Routines
-func Lock(m *Mutex, r *Routine) {
+func Lock(m Mutex, r *Routine) {
 	defer m.mu.Lock()
 
 	// if detection is disabled
@@ -16,12 +16,12 @@ func Lock(m *Mutex, r *Routine) {
 	}
 
 	// update data structures
-	r.updateLock(m)
+	r.updateLock(&m)
 
 }
 
 // Unlock mutex m
-func Unlock(m *Mutex) {
+func Unlock(m Mutex) {
 	defer m.mu.Unlock()
 
 }
