@@ -15,8 +15,9 @@ type Routine struct {
 // Initialize the go routine
 func NewRoutine() *Routine {
 	r := Routine{
-		lockSet: make([]*Mutex, 0),
-		context: make(map[*Mutex]callerInfo)}
+		lockSet:          make([]*Mutex, 0),
+		context:          make(map[*Mutex]callerInfo),
+		lockDependencies: make(map[uintptr]dependency)}
 	routines = append(routines, &r)
 	return &r
 }
