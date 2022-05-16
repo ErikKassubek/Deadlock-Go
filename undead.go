@@ -8,9 +8,10 @@ func Initialize() {
 // Lock mutex m in routine r
 // TODO: change so that r is calculated and taken from Routines
 func Lock(m *Mutex, r *Routine) {
+	defer m.mu.Lock()
+
 	// if detection is disabled
 	if !Opts.RunDetection {
-		m.mu.Lock()
 		return
 	}
 
@@ -21,6 +22,7 @@ func Lock(m *Mutex, r *Routine) {
 
 // Unlock mutex m
 func Unlock(m *Mutex) {
+	defer m.mu.Unlock()
 
 }
 
