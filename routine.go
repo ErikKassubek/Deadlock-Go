@@ -1,6 +1,10 @@
 package undead
 
-import "unsafe"
+import (
+	"fmt"
+	"runtime"
+	"unsafe"
+)
 
 var routines []*(Routine)
 
@@ -28,8 +32,7 @@ func (r *Routine) updateLock(m *Mutex) {
 
 	// if lock is a single level lock
 	if r.numberOfLocks == 0 {
-		r.lockSet = append(r.lockSet, m)
-		r.numberOfLocks++
+		r.updateRoutine(m)
 		return
 	}
 
@@ -45,6 +48,16 @@ func (r *Routine) updateLock(m *Mutex) {
 
 	}
 
+	r.updateLock(m)
+}
+
+// update the routine objects
+func (r *Routine) updateRoutine(m *Mutex) {
 	r.lockSet = append(r.lockSet, m)
 	r.numberOfLocks++
+	_, file, line, _ := runtime.Caller(2)
+	fmt.Print(file)
+	fmt.Println(line)
+	info := newInfo(file, line)
+	r.context[m] = info
 }

@@ -2,6 +2,14 @@ package undead
 
 // type to save info about caller
 type callerInfo struct {
-	File string
-	Line int
+	file string
+	line int
+}
+
+// create a new caller info
+func newInfo(file string, line int) callerInfo {
+	return callerInfo{
+		file: file,
+		line: line,
+	}
 }
