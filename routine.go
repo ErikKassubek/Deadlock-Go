@@ -3,9 +3,12 @@ package undead
 import (
 	"runtime"
 	"unsafe"
+
+	"github.com/petermattis/goid"
 )
 
-var routines []*(Routine)
+// TODO: calculate routine from variable storage position
+var routines map[int64]Routine
 
 // type to implement structures for lock logging
 type Routine struct {
@@ -16,13 +19,13 @@ type Routine struct {
 }
 
 // Initialize the go routine
-func NewRoutine() *Routine {
+func NewRoutine() {
 	r := Routine{
 		lockSet:          make([]*Mutex, 0),
 		context:          make(map[*Mutex]callerInfo),
 		lockDependencies: make(map[uintptr]dependency)}
-	routines = append(routines, &r)
-	return &r
+	id := goid.Get()
+	routines[id] = r
 }
 
 // update the routine structure is a mutex is locked

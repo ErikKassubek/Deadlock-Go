@@ -3,6 +3,8 @@ package undead
 import (
 	"runtime"
 	"sync"
+
+	"github.com/petermattis/goid"
 )
 
 // type to implement a lock
@@ -10,9 +12,8 @@ type Mutex struct {
 	mu sync.Mutex
 }
 
-// Lock mutex m in routine r
-// TODO: change so that r is calculated and taken from Routines
-func (m *Mutex) Lock(r *Routine) {
+// Lock mutex m
+func (m *Mutex) Lock() {
 	defer m.mu.Lock()
 
 	// if detection is disabled
@@ -22,6 +23,7 @@ func (m *Mutex) Lock(r *Routine) {
 
 	// update data structures if more than on routine is running
 	if runtime.NumGoroutine() > 1 {
+		r := routines[goid.Get()]
 		r.updateLock(m)
 	}
 
