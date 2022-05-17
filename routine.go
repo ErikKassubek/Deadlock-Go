@@ -49,15 +49,17 @@ func (r *Routine) updateLock(m *Mutex) {
 	}
 
 	r.updateLock(m)
+
+	// save the stack
+	_, file, line, _ := runtime.Caller(1)
+	fmt.Print(file)
+	fmt.Println(line)
+	info := newInfo(file, line)
+	r.context[m] = info
 }
 
 // update the routine objects
 func (r *Routine) updateRoutine(m *Mutex) {
 	r.lockSet = append(r.lockSet, m)
 	r.numberOfLocks++
-	_, file, line, _ := runtime.Caller(2)
-	fmt.Print(file)
-	fmt.Println(line)
-	info := newInfo(file, line)
-	r.context[m] = info
 }
