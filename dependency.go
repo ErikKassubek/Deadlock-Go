@@ -2,22 +2,24 @@ package undead
 
 // type to implement a dependency
 type dependency struct {
-	mu      *Mutex     // lock
-	count   int        // mu depends on count locks
-	LockSet [](*Mutex) // lock which where hold while mu was acquired
+	lock          *mutex     // lock
+	numberOfLocks int        // on how many locks does mu depend
+	holdingSet    [](*mutex) // lock which where hold while mu was acquired
+	callsiteCount int        // TODO: what is that, change name if nessesary
 }
 
 // create a new dependency object
-func newDependency(lock *Mutex, numberOfLocks int,
-	currentLocks [](*Mutex)) dependency {
+func newDependency(lock *mutex, numberOfLocks int,
+	currentLocks [](*mutex)) dependency {
 	d := dependency{
-		mu:      lock,
-		count:   numberOfLocks,
-		LockSet: make([]*Mutex, 0),
+		lock:          lock,
+		numberOfLocks: numberOfLocks,
+		holdingSet:    make([]*mutex, 0),
+		callsiteCount: 0,
 	}
 
 	for i := 0; i < numberOfLocks; i++ {
-		d.LockSet = append(d.LockSet, currentLocks[i])
+		d.holdingSet = append(d.holdingSet, currentLocks[i])
 	}
 
 	return d

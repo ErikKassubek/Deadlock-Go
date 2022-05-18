@@ -8,18 +8,28 @@ import (
 )
 
 // type to implement a lock
-type Mutex struct {
-	mu sync.Mutex
+type mutex struct {
+	mu      sync.Mutex
+	context callerInfo // info about the mutex initialization
+}
+
+// create Lock
+func NewLock() (m mutex) {
+	_, file, line, _ := runtime.Caller(2)
+	m.context = newInfo(file, line)
+	return m
 }
 
 // Lock mutex m
-func (m *Mutex) Lock() {
+func (m *mutex) Lock() {
 	defer m.mu.Lock()
 
 	// if detection is disabled
 	if !Opts.RunDetection {
 		return
 	}
+
+	// TODO: avoid recursive intercepting
 
 	// update data structures if more than on routine is running
 	if runtime.NumGoroutine() > 1 {
@@ -30,7 +40,10 @@ func (m *Mutex) Lock() {
 }
 
 // Unlock mutex m
-func (m *Mutex) Unlock() {
+func (m *mutex) Unlock() {
 	defer m.mu.Unlock()
+
+	r := routines[goid.Get()]
+	r.updateUnlock(m)
 
 }

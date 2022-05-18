@@ -2,12 +2,14 @@ package undead
 
 import (
 	"testing"
+	"time"
 )
 
 func TestPotentialDeadlock1(t *testing.T) {
 	Initialize()
-	var x Mutex
-	var y Mutex
+
+	x := NewLock()
+	y := NewLock()
 	ch := make(chan bool, 2)
 
 	go func() {
@@ -27,6 +29,8 @@ func TestPotentialDeadlock1(t *testing.T) {
 		y.Unlock()
 		ch <- true
 	}()
+
+	time.Sleep(time.Second * 20)
 
 	<-ch
 	<-ch
