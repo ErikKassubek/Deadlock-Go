@@ -6,7 +6,7 @@ import (
 
 // initialize deadlock detector
 func Initialize() {
-	routines = make(map[int64]*routine)
+	mapIndex = make(map[int64]int)
 
 	// if periodical detection is disabled
 	if !Opts.PeriodicDetection {
@@ -15,22 +15,13 @@ func Initialize() {
 
 	go func() {
 		timer := time.NewTicker(Opts.PeriodicDetectionTime)
+		stack := newChainStack()
 
 		for {
 			select {
 			case <-timer.C:
-				periodicalDetection()
+				periodicalDetection(&stack)
 			}
 		}
 	}()
-}
-
-// run periodical deadlock detection check
-func periodicalDetection() {
-	// TODO: implement periodical detection
-}
-
-// run comprehensive detection is program is terminated
-func Detection() {
-	// TODO: implement comprehensive detection
 }

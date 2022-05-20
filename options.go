@@ -13,9 +13,18 @@ var Opts = struct {
 	ComprehensiveDetection bool
 	// Set how often the periodic detection is run
 	PeriodicDetectionTime time.Duration
+	// maximum number of dependencies
+	MaxDependencies int
+	// The maximum depth of a nested lock tree
+	MaxHoldingDepth int
+	// The maximum number of routines
+	MaxRoutines int
 }{
 	RunDetection:           true,
 	PeriodicDetection:      true,
 	ComprehensiveDetection: true,
 	PeriodicDetectionTime:  time.Second * 2,
+	MaxDependencies:        4096,
+	MaxHoldingDepth:        6,
+	MaxRoutines:            1024,
 }

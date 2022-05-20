@@ -3,8 +3,6 @@ package undead
 import (
 	"runtime"
 	"sync"
-
-	"github.com/petermattis/goid"
 )
 
 // type to implement a lock
@@ -29,12 +27,14 @@ func (m *mutex) Lock() {
 		return
 	}
 
+	index := getRoutineIndex()
+	r := &routines[index]
+
 	// TODO: avoid recursive intercepting
 
 	// update data structures if more than on routine is running
 	if runtime.NumGoroutine() > 1 {
-		r := routines[goid.Get()]
-		r.updateLock(m)
+		(*r).updateLock(m)
 	}
 
 }
@@ -43,7 +43,9 @@ func (m *mutex) Lock() {
 func (m *mutex) Unlock() {
 	defer m.mu.Unlock()
 
-	r := routines[goid.Get()]
+	index := getRoutineIndex()
+
+	r := routines[index]
 	r.updateUnlock(m)
 
 }
