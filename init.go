@@ -1,6 +1,7 @@
 package deadlock
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -20,6 +21,7 @@ func Initialize() {
 		for {
 			select {
 			case <-timer.C:
+				fmt.Println("test periodical")
 				periodicalDetection(&stack)
 			}
 		}

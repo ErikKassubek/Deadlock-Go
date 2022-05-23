@@ -70,3 +70,61 @@ func TestActualDeadlock(t *testing.T) {
 	<-ch
 	<-ch
 }
+
+func TestPotentialDeadlockForPeriodicalDetection(t *testing.T) {
+	Initialize()
+
+	a := NewLock()
+	b := NewLock()
+	c := NewLock()
+	d := NewLock()
+
+	ch := make(chan bool, 2)
+	ch1 := make(chan bool)
+
+	Opts.PeriodicDetectionTime = time.Second * 2
+
+	go func() {
+		NewRoutine()
+
+		a.Lock()
+		b.Lock()
+		ch1 <- true
+
+		time.Sleep(time.Second * 3)
+
+		d.Lock()
+		c.Lock()
+		c.Unlock()
+		d.Unlock()
+
+		b.Unlock()
+		a.Unlock()
+	}()
+
+	go func() {
+		NewRoutine()
+
+		c.Lock()
+		d.Lock()
+
+		d.Unlock()
+		c.Unlock()
+
+		<-ch1
+		b.Lock()
+		a.Lock()
+
+		time.Sleep(time.Second * 3)
+
+		d.Lock()
+
+		a.Unlock()
+		b.Unlock()
+		d.Unlock()
+
+	}()
+
+	<-ch
+	<-ch
+}

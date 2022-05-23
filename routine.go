@@ -56,7 +56,7 @@ func (r *routine) updateLock(m *mutex) {
 	hc := r.holdingCount
 
 	// if lock is a single level lock
-	if r.holdingCount > 0 {
+	if hc > 0 {
 		// found nested lock
 		key := uintptr(unsafe.Pointer(m)) ^ uintptr(
 			unsafe.Pointer((*currentHolding)[r.holdingCount-1]))
@@ -66,6 +66,9 @@ func (r *routine) updateLock(m *mutex) {
 		var dep *dependency
 
 		d, ok := (*depMap)[key]
+
+		isDepSet := true // TODO: remove if replaced by check if callside is necessary
+
 		if ok {
 			dhl = *d
 			if r.hasEntryDhl(m, &dhl, dep) {
@@ -73,6 +76,8 @@ func (r *routine) updateLock(m *mutex) {
 				r.depCount++
 				dep.update(m, currentHolding, hc)
 				dhl = append(dhl, dep)
+			} else {
+				isDepSet = false
 			}
 		} else {
 			dep = (*r.dependencies)[r.depCount]
@@ -87,9 +92,10 @@ func (r *routine) updateLock(m *mutex) {
 
 		// check wether it is necessary to get the caller info
 		// TODO: check wether it is necessary to get stack
-		_, file, line, _ := runtime.Caller(2)
-		dep.callsite = newInfo(file, line)
-
+		if isDepSet {
+			_, file, line, _ := runtime.Caller(2)
+			dep.callsite = newInfo(file, line)
+		}
 	}
 	(*currentHolding)[hc] = m
 	r.holdingCount++
@@ -118,6 +124,7 @@ func (r *routine) updateUnlock(m *mutex) {
 	for i := r.holdingCount - 1; i >= 0; i-- {
 		if (*r.holdingSet)[i] == m {
 			*r.holdingSet = append((*r.holdingSet)[:i], (*r.holdingSet)[i+1:]...)
+			*r.holdingSet = append(*r.holdingSet, nil)
 			r.holdingCount--
 			break
 		}

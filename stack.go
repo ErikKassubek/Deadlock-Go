@@ -45,7 +45,7 @@ func (s *chainStack) push(dep *dependency, index int) {
 // pop from stack
 func (s *chainStack) pop() {
 	if s.tail != s.list {
-		s.list.prev.next = s.tail.next
+		s.tail.prev.next = s.tail.next
 		s.tail = s.tail.prev
 	}
 }

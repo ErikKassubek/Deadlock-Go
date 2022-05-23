@@ -113,6 +113,7 @@ func dfsCurrent(stack *chainStack, visiting int, isTraversed []bool,
 					fmt.Println("Periodical Detection detected deadlock")
 					os.Exit(0)
 				}
+				fmt.Println("Periodical Detection detected potential deadlock")
 				stack.pop()
 			} else {
 				isTraversed[threadIndex] = true
