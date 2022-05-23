@@ -1,4 +1,4 @@
-package undead
+package deadlock
 
 // type to save info about caller
 type callerInfo struct {

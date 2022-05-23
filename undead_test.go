@@ -1,4 +1,4 @@
-package undead
+package deadlock
 
 import (
 	"testing"

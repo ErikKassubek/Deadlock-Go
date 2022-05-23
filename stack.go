@@ -1,4 +1,4 @@
-package undead
+package deadlock
 
 // helper type for stack
 type chainList struct {

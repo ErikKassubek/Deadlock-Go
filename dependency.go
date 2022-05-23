@@ -1,4 +1,4 @@
-package undead
+package deadlock
 
 // type to implement a dependency
 type dependency struct {

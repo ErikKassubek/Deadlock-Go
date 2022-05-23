@@ -1,4 +1,4 @@
-module github.com/ErikKassubek/UNDEAD-go
+module github.com/ErikKassubek/Deadlock-Go
 
 go 1.18
 
