@@ -38,7 +38,7 @@ func TestPotentialDeadlock1(t *testing.T) {
 	t.Error("")
 }
 
-func actualDeadlock() {
+func TestActualDeadlock(t *testing.T) {
 	Initialize()
 
 	x := NewLock()
@@ -48,9 +48,9 @@ func actualDeadlock() {
 
 	go func() {
 		NewRoutine()
+		x.Lock()
 		time.Sleep(time.Second)
 		ch2 <- true
-		x.Lock()
 		y.Lock()
 		y.Unlock()
 		x.Unlock()
@@ -59,8 +59,8 @@ func actualDeadlock() {
 
 	go func() {
 		NewRoutine()
-		<-ch2
 		y.Lock()
+		<-ch2
 		x.Lock()
 		x.Unlock()
 		y.Unlock()
@@ -69,10 +69,4 @@ func actualDeadlock() {
 
 	<-ch
 	<-ch
-}
-
-func TestActualDeadlock(t *testing.T) {
-	for i := 0; i < 20; i++ {
-		actualDeadlock()
-	}
 }

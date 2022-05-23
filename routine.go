@@ -2,12 +2,14 @@ package undead
 
 import (
 	"runtime"
+	"sync"
 	"unsafe"
 
 	"github.com/petermattis/goid"
 )
 
 var mapIndex map[int64]int
+var mapIndexLock sync.Mutex
 var routines []routine
 var routinesIndex = 0
 
@@ -38,7 +40,9 @@ func NewRoutine() {
 		depCount:      0,
 	}
 	routines = append(routines, r)
+	mapIndexLock.Lock()
 	mapIndex[goid.Get()] = routinesIndex
+	mapIndexLock.Unlock()
 	routinesIndex++
 	for i := 0; i < Opts.MaxHoldingDepth; i++ {
 		dep := newDependency(nil, 0, nil)
