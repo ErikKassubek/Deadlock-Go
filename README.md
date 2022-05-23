@@ -1,4 +1,4 @@
-# Implementation of UNDEAD for go
+# Deadlock Detection in Go
 <span style="color:red">This work is still under development and does not work yet.</span>
 
 Based on J. Zhou, S. Silvestro, H. Liu, Y. Cai und T. Liu, „UNDEAD: Detecting and preventing
