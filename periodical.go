@@ -165,6 +165,10 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 func reportDeadlockPeriodical(stack *depStack) {
 	fmt.Println("DEADLOCK")
 	for ds := stack.list.next; ds != nil; ds = ds.next {
-		fmt.Println(ds.depEntry.lock.context.file, ds.depEntry.lock.context.line)
+		for _, caller := range ds.depEntry.lock.context {
+			fmt.Println(caller.file, caller.line)
+		}
+		fmt.Println("")
 	}
+	fmt.Println("")
 }

@@ -94,7 +94,7 @@ func (r *routine) updateLock(m *mutex) {
 		// TODO: check wether it is necessary to get stack
 		if isDepSet {
 			_, file, line, _ := runtime.Caller(2)
-			m.context = newInfo(file, line)
+			m.context = append(m.context, newInfo(file, line))
 		}
 	}
 	(*currentHolding)[hc] = m

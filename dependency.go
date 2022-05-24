@@ -5,7 +5,6 @@ type dependency struct {
 	lock         *mutex     // lock
 	holdingCount int        // on how many locks does mu depend
 	holdingSet   [](*mutex) // lock which where hold while mu was acquired
-	callsite     callerInfo // info about caller
 }
 
 // create a new dependency object

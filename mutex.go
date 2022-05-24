@@ -8,13 +8,13 @@ import (
 // type to implement a lock
 type mutex struct {
 	mu      sync.Mutex
-	context callerInfo // info about the mutex initialization
+	context []callerInfo // info about the mutex initialization
 }
 
 // create Lock
 func NewLock() (m mutex) {
-	_, file, line, _ := runtime.Caller(2)
-	m.context = newInfo(file, line)
+	_, file, line, _ := runtime.Caller(1)
+	m.context = append(m.context, newInfo(file, line))
 	return m
 }
 
