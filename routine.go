@@ -55,7 +55,7 @@ func (r *routine) updateLock(m *mutex) {
 	currentHolding := r.holdingSet
 	hc := r.holdingCount
 
-	// if lock is a single level lock
+	// if lock is not a single level lock
 	if hc > 0 {
 		// found nested lock
 		key := uintptr(unsafe.Pointer(m)) ^ uintptr(
@@ -94,7 +94,7 @@ func (r *routine) updateLock(m *mutex) {
 		// TODO: check wether it is necessary to get stack
 		if isDepSet {
 			_, file, line, _ := runtime.Caller(2)
-			dep.callsite = newInfo(file, line)
+			m.context = newInfo(file, line)
 		}
 	}
 	(*currentHolding)[hc] = m

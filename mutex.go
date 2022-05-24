@@ -30,8 +30,6 @@ func (m *mutex) Lock() {
 	index := getRoutineIndex()
 	r := &routines[index]
 
-	// TODO: avoid recursive intercepting
-
 	// update data structures if more than on routine is running
 	if runtime.NumGoroutine() > 1 {
 		(*r).updateLock(m)

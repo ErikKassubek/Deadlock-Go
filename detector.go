@@ -7,7 +7,7 @@ import (
 )
 
 // run periodical deadlock detection check
-func periodicalDetection(stack *chainStack) {
+func periodicalDetection(stack *depStack) {
 	// only check if at least two routines are running
 	if runtime.NumGoroutine() < 2 {
 		return
@@ -38,7 +38,7 @@ func periodicalDetection(stack *chainStack) {
 		return
 	}
 	if candidates > 1 {
-		_ = analyzeCurrent(lastHolding, stack)
+		_ = detectionPeriodical(lastHolding, stack)
 	}
 
 }
@@ -61,9 +61,9 @@ func checkNew(lastHolding *([](*mutex)), sthNew *bool, candidates *int) {
 }
 
 // analyses the current state for deadlocks
-func analyzeCurrent(lastHolding [](*mutex), stack *chainStack) (ret bool) {
+func detectionPeriodical(lastHolding [](*mutex), stack *depStack) (ret bool) {
 	ret = false
-	isTraversed := make([]bool, len(routines))
+	isTraversed := make([]bool, routinesIndex)
 
 	for index, r := range routines {
 		if r.curDep == nil || r.index < 0 {
@@ -72,8 +72,7 @@ func analyzeCurrent(lastHolding [](*mutex), stack *chainStack) (ret bool) {
 		isTraversed[index] = true
 
 		stack.push(r.curDep, index)
-		ret = ret || dfsCurrent(stack, index, isTraversed, len(routines),
-			lastHolding)
+		ret = ret || dfsPeriodical(stack, index, isTraversed, lastHolding)
 		stack.pop()
 		r.curDep = nil
 	}
@@ -81,10 +80,10 @@ func analyzeCurrent(lastHolding [](*mutex), stack *chainStack) (ret bool) {
 }
 
 // depth first search on current dependencies
-func dfsCurrent(stack *chainStack, visiting int, isTraversed []bool,
-	threadIndex int, lastHolding []*mutex) bool {
+func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
+	lastHolding []*mutex) bool {
 	ret := false
-	for i := visiting + 1; i < threadIndex; i++ {
+	for i := visiting + 1; i < routinesIndex; i++ {
 		r := routines[i]
 		if r.curDep == nil || r.index < 0 {
 			continue
@@ -109,19 +108,17 @@ func dfsCurrent(stack *chainStack, visiting int, isTraversed []bool,
 					}
 				}
 				if !sthNew { // nothing changed in cycled threads, deadlock
-					reportDeadlockCurrent(stack)
-					fmt.Println("Periodical Detection detected deadlock")
+					reportDeadlockPeriodical(stack)
 					os.Exit(0)
 				}
-				fmt.Println("Periodical Detection detected potential deadlock")
 				stack.pop()
 			} else {
-				isTraversed[threadIndex] = true
-				stack.push(dep, threadIndex)
-				ret = ret || dfsCurrent(stack, visiting, isTraversed, threadIndex,
+				isTraversed[routinesIndex] = true
+				stack.push(dep, routinesIndex)
+				ret = ret || dfsPeriodical(stack, visiting, isTraversed,
 					lastHolding)
 				stack.pop()
-				isTraversed[threadIndex] = false
+				isTraversed[routinesIndex] = false
 			}
 		}
 	}
@@ -129,7 +126,7 @@ func dfsCurrent(stack *chainStack, visiting int, isTraversed []bool,
 }
 
 // check if adding dep to chain will still be a chain
-func isChain(stack *chainStack, dep *dependency) bool {
+func isChain(stack *depStack, dep *dependency) bool {
 	for cl := stack.list.next; cl != nil; cl = cl.next {
 		if cl.depEntry == dep {
 			return false
@@ -154,7 +151,7 @@ func isChain(stack *chainStack, dep *dependency) bool {
 }
 
 // check if adding dep to chain will give a cycle chain
-func isCycleChain(stack *chainStack, dep *dependency) bool {
+func isCycleChain(stack *depStack, dep *dependency) bool {
 	for i := 0; i < stack.list.next.depEntry.holdingCount; i++ {
 		if stack.list.next.depEntry.holdingSet[i] == dep.lock {
 			return true
@@ -165,7 +162,15 @@ func isCycleChain(stack *chainStack, dep *dependency) bool {
 
 // output deadlocks detected from current status
 // current chain will be the whole cycle
-func reportDeadlockCurrent(stack *chainStack) {
-	// TODO: implement
+func reportDeadlockPeriodical(stack *depStack) {
 	fmt.Println("DEADLOCK")
+	for ds := stack.list.next; ds != nil; ds = ds.next {
+		fmt.Println(ds.depEntry.lock.context.file, ds.depEntry.lock.context.line)
+	}
+}
+
+// run comprehensive detection is program is terminated
+func Detection() {
+	// TODO: implement comprehensive detection
+	fmt.Println("1")
 }

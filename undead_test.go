@@ -7,6 +7,7 @@ import (
 
 func TestPotentialDeadlock1(t *testing.T) {
 	Initialize()
+	defer Detection()
 
 	x := NewLock()
 	y := NewLock()
@@ -16,7 +17,7 @@ func TestPotentialDeadlock1(t *testing.T) {
 		NewRoutine()
 		x.Lock()
 		y.Lock()
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 1)
 		y.Unlock()
 		x.Unlock()
 		ch <- true
@@ -26,7 +27,7 @@ func TestPotentialDeadlock1(t *testing.T) {
 		NewRoutine()
 		y.Lock()
 		x.Lock()
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 1)
 		x.Unlock()
 		y.Unlock()
 		ch <- true
@@ -34,8 +35,6 @@ func TestPotentialDeadlock1(t *testing.T) {
 
 	<-ch
 	<-ch
-
-	t.Error("")
 }
 
 func TestActualDeadlock(t *testing.T) {
@@ -65,64 +64,6 @@ func TestActualDeadlock(t *testing.T) {
 		x.Unlock()
 		y.Unlock()
 		ch <- true
-	}()
-
-	<-ch
-	<-ch
-}
-
-func TestPotentialDeadlockForPeriodicalDetection(t *testing.T) {
-	Initialize()
-
-	a := NewLock()
-	b := NewLock()
-	c := NewLock()
-	d := NewLock()
-
-	ch := make(chan bool, 2)
-	ch1 := make(chan bool)
-
-	Opts.PeriodicDetectionTime = time.Second * 2
-
-	go func() {
-		NewRoutine()
-
-		a.Lock()
-		b.Lock()
-		ch1 <- true
-
-		time.Sleep(time.Second * 3)
-
-		d.Lock()
-		c.Lock()
-		c.Unlock()
-		d.Unlock()
-
-		b.Unlock()
-		a.Unlock()
-	}()
-
-	go func() {
-		NewRoutine()
-
-		c.Lock()
-		d.Lock()
-
-		d.Unlock()
-		c.Unlock()
-
-		<-ch1
-		b.Lock()
-		a.Lock()
-
-		time.Sleep(time.Second * 3)
-
-		d.Lock()
-
-		a.Unlock()
-		b.Unlock()
-		d.Unlock()
-
 	}()
 
 	<-ch
