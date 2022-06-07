@@ -13,7 +13,6 @@ routine.go
 Implementation of the structure to save the routine wise saved data.
 This contains mainly the lock-tree for each routine as well as functionality
 to update these trees.
-TODO: implement check if collection of callside information is required
 */
 
 import (
@@ -37,7 +36,7 @@ type routine struct {
 	dependencyMap map[uintptr]*[]*dependency
 	dependencies  [](*dependency) // pre-allocated dependencies
 	curDep        *dependency     // current dependency
-	depCount      int             // counter for dependenies
+	depCount      int             // counter for dependencies
 }
 
 // Initialize the go routine
@@ -83,7 +82,7 @@ func (r *routine) updateLock(m *mutex) {
 
 		d, ok := depMap[key]
 
-		isDepSet := true // TODO: remove if replaced by check if callside is necessary
+		isDepSet := true
 
 		panicMassage := `Number of dependencies is greater than max number of 
 			dependencies. Increase Opts.MaxDependencies.`
@@ -115,8 +114,6 @@ func (r *routine) updateLock(m *mutex) {
 		// update current dependency
 		r.curDep = dep
 
-		// check wether it is necessary to get the caller info
-		// TODO: check wether it is necessary to get stack
 		if isDepSet {
 			_, file, line, _ := runtime.Caller(2)
 			m.context = append(m.context, newInfo(file, line, false))
