@@ -1,13 +1,27 @@
 package deadlock
 
+/*
+Author: Erik Kassubek <erik-kassubek@t-online.de>
+Package: deadlock
+Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
+	Institute of Computer Science: Dynamic Deadlock Detection in Go
+Date: 2022-06-05
+*/
+
+/*
+undead_test.go
+Tests for the deadlock detection
+*/
+
 import (
+	"math/rand"
 	"testing"
 	"time"
 )
 
 func TestPotentialDeadlock1(t *testing.T) {
 	Initialize()
-	defer Detection()
+	defer Finalize()
 
 	x := NewLock()
 	y := NewLock()
@@ -15,26 +29,31 @@ func TestPotentialDeadlock1(t *testing.T) {
 
 	go func() {
 		NewRoutine()
-		x.Lock()
-		y.Lock()
-		time.Sleep(time.Second * 1)
-		y.Unlock()
-		x.Unlock()
+		for i := 0; i < 10; i++ {
+			x.Lock()
+			y.Lock()
+			time.Sleep(time.Second * time.Duration(rand.Float64()))
+			y.Unlock()
+			x.Unlock()
+		}
 		ch <- true
 	}()
 
 	go func() {
 		NewRoutine()
-		y.Lock()
-		x.Lock()
-		time.Sleep(time.Second * 1)
-		x.Unlock()
-		y.Unlock()
+		for i := 0; i < 10; i++ {
+			y.Lock()
+			x.Lock()
+			time.Sleep(time.Second * time.Duration(rand.Float64()))
+			x.Unlock()
+			y.Unlock()
+		}
 		ch <- true
 	}()
 
 	<-ch
 	<-ch
+
 }
 
 func TestActualDeadlock(t *testing.T) {

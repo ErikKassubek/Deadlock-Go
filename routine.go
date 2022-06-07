@@ -1,5 +1,21 @@
 package deadlock
 
+/*
+Author: Erik Kassubek <erik-kassubek@t-online.de>
+Package: deadlock
+Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
+	Institute of Computer Science: Dynamic Deadlock Detection in Go
+Date: 2022-06-05
+*/
+
+/*
+routine.go
+Implementation of the structure to save the routine wise saved data.
+This contains mainly the lock-tree for each routine as well as functionality
+to update these trees.
+TODO: implement check if collection of callside information is required
+*/
+
 import (
 	"runtime"
 	"sync"
@@ -10,43 +26,42 @@ import (
 
 var mapIndex map[int64]int
 var mapIndexLock sync.Mutex
-var routines []routine
+var routines = make([]routine, Opts.MaxRoutines)
 var routinesIndex = 0
 
 // type to implement structures for lock logging
 type routine struct {
-	index         int           // index of the routine
-	holdingCount  int           // number of currently hold locks
-	holdingSet    *([](*mutex)) // set of currently hold locks
-	dependencyMap *(map[uintptr]*[]*dependency)
-	dependencies  *([](*dependency)) // pre-allocated dependencies
-	curDep        *dependency        // current dependency
-	depCount      int                // counter for dependenies
+	index         int        // index of the routine
+	holdingCount  int        // number of currently hold locks
+	holdingSet    [](*mutex) // set of currently hold locks
+	dependencyMap map[uintptr]*[]*dependency
+	dependencies  [](*dependency) // pre-allocated dependencies
+	curDep        *dependency     // current dependency
+	depCount      int             // counter for dependenies
 }
 
 // Initialize the go routine
 func NewRoutine() {
-	hs := make([]*mutex, Opts.MaxHoldingDepth)
-	dm := make(map[uintptr]*[]*dependency)
-	dep := make([]*dependency, Opts.MaxHoldingDepth)
-
 	r := routine{
 		index:         routinesIndex,
 		holdingCount:  0,
-		holdingSet:    &hs,
-		dependencyMap: &dm,
-		dependencies:  &dep,
+		holdingSet:    make([]*mutex, Opts.MaxHoldingDepth),
+		dependencyMap: make(map[uintptr]*[]*dependency),
+		dependencies:  make([]*dependency, Opts.MaxHoldingDepth),
 		curDep:        nil,
 		depCount:      0,
 	}
-	routines = append(routines, r)
+	if routinesIndex >= Opts.MaxRoutines {
+		panic("Number of routines is greater than max number of routines. Increase Opts.MaxRoutines.")
+	}
+	routines[routinesIndex] = r
 	mapIndexLock.Lock()
 	mapIndex[goid.Get()] = routinesIndex
 	mapIndexLock.Unlock()
 	routinesIndex++
 	for i := 0; i < Opts.MaxHoldingDepth; i++ {
 		dep := newDependency(nil, 0, nil)
-		(*r.dependencies)[i] = &dep
+		r.dependencies[i] = &dep
 	}
 }
 
@@ -59,32 +74,32 @@ func (r *routine) updateLock(m *mutex) {
 	if hc > 0 {
 		// found nested lock
 		key := uintptr(unsafe.Pointer(m)) ^ uintptr(
-			unsafe.Pointer((*currentHolding)[r.holdingCount-1]))
+			unsafe.Pointer(currentHolding[r.holdingCount-1]))
 
 		depMap := r.dependencyMap
 		dhl := make([]*dependency, 0)
 		var dep *dependency
 
-		d, ok := (*depMap)[key]
+		d, ok := depMap[key]
 
 		isDepSet := true // TODO: remove if replaced by check if callside is necessary
 
 		if ok {
 			dhl = *d
 			if r.hasEntryDhl(m, &dhl, dep) {
-				dep = (*r.dependencies)[r.depCount]
+				dep = r.dependencies[r.depCount]
 				r.depCount++
-				dep.update(m, currentHolding, hc)
+				dep.update(m, &currentHolding, hc)
 				dhl = append(dhl, dep)
 			} else {
 				isDepSet = false
 			}
 		} else {
-			dep = (*r.dependencies)[r.depCount]
+			dep = r.dependencies[r.depCount]
 			r.depCount++
-			dep.update(m, currentHolding, hc)
+			dep.update(m, &currentHolding, hc)
 			dhl = append(dhl, dep)
-			(*depMap)[key] = &dhl
+			depMap[key] = &dhl
 		}
 
 		// update current dependency
@@ -94,10 +109,13 @@ func (r *routine) updateLock(m *mutex) {
 		// TODO: check wether it is necessary to get stack
 		if isDepSet {
 			_, file, line, _ := runtime.Caller(2)
-			m.context = append(m.context, newInfo(file, line))
+			m.context = append(m.context, newInfo(file, line, false))
 		}
 	}
-	(*currentHolding)[hc] = m
+	if hc >= Opts.MaxHoldingDepth {
+		panic("Holding Count is grater than maximum holding depth. Increase Opts.MaxHoldingDepth.")
+	}
+	currentHolding[hc] = m
 	r.holdingCount++
 }
 
@@ -108,7 +126,7 @@ func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency),
 		hc := r.holdingCount
 		if d.lock == m && d.holdingCount == hc {
 			i := 0
-			for d.holdingSet[i] == (*r.holdingSet)[i] && i <= hc {
+			for d.holdingSet[i] == r.holdingSet[i] && i <= hc {
 				i++
 			}
 			if i == hc {
@@ -122,9 +140,9 @@ func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency),
 // update the routine structure is a mutex is released
 func (r *routine) updateUnlock(m *mutex) {
 	for i := r.holdingCount - 1; i >= 0; i-- {
-		if (*r.holdingSet)[i] == m {
-			*r.holdingSet = append((*r.holdingSet)[:i], (*r.holdingSet)[i+1:]...)
-			*r.holdingSet = append(*r.holdingSet, nil)
+		if r.holdingSet[i] == m {
+			r.holdingSet = append(r.holdingSet[:i], r.holdingSet[i+1:]...)
+			r.holdingSet = append(r.holdingSet, nil)
 			r.holdingCount--
 			break
 		}
@@ -132,7 +150,6 @@ func (r *routine) updateUnlock(m *mutex) {
 }
 
 // get the index of the routine
-// TODO: calculate from memory position
 func getRoutineIndex() int {
 	id := goid.Get()
 	return mapIndex[id]

@@ -1,5 +1,18 @@
 package deadlock
 
+/*
+Author: Erik Kassubek <erik-kassubek@t-online.de>
+Package: deadlock
+Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
+	Institute of Computer Science: Dynamic Deadlock Detection in Go
+Date: 2022-06-05
+*/
+
+/*
+stack.go
+Implementation of a helper type to realize a chain stack
+*/
+
 // helper type for stack
 type linkedList struct {
 	depEntry *dependency
