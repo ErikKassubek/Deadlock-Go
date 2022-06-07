@@ -25,29 +25,32 @@ func TestPotentialDeadlock1(t *testing.T) {
 
 	x := NewLock()
 	y := NewLock()
+	z := NewLock()
 	ch := make(chan bool, 2)
 
 	go func() {
 		NewRoutine()
-		for i := 0; i < 10; i++ {
-			x.Lock()
-			y.Lock()
-			time.Sleep(time.Second * time.Duration(rand.Float64()))
-			y.Unlock()
-			x.Unlock()
-		}
+
+		z.Lock()
+		z.Unlock()
+		x.Lock()
+		y.Lock()
+		time.Sleep(time.Second * time.Duration(rand.Float64()))
+		y.Unlock()
+		x.Unlock()
+
 		ch <- true
 	}()
 
 	go func() {
 		NewRoutine()
-		for i := 0; i < 10; i++ {
-			y.Lock()
-			x.Lock()
-			time.Sleep(time.Second * time.Duration(rand.Float64()))
-			x.Unlock()
-			y.Unlock()
-		}
+
+		y.Lock()
+		x.Lock()
+		time.Sleep(time.Second * time.Duration(rand.Float64()))
+		x.Unlock()
+		y.Unlock()
+
 		ch <- true
 	}()
 
@@ -57,7 +60,7 @@ func TestPotentialDeadlock1(t *testing.T) {
 }
 
 // test with 3 edge loop
-func TestPotentialDeadlock2(t *testing.T) {
+func TestPotentialDeadlockThreeEdgeCirc(t *testing.T) {
 	Initialize()
 	defer Finalize()
 
@@ -69,41 +72,82 @@ func TestPotentialDeadlock2(t *testing.T) {
 
 	go func() {
 		NewRoutine()
-		for i := 0; i < 10; i++ {
-			x.Lock()
-			y.Lock()
-			time.Sleep(time.Second * time.Duration(rand.Float64()))
-			y.Unlock()
-			x.Unlock()
-		}
+
+		x.Lock()
+		y.Lock()
+		time.Sleep(time.Second * time.Duration(rand.Float64()))
+		y.Unlock()
+		x.Unlock()
+
 		ch <- true
 	}()
 
 	go func() {
 		NewRoutine()
-		for i := 0; i < 10; i++ {
-			y.Lock()
-			z.Lock()
-			time.Sleep(time.Second * time.Duration(rand.Float64()))
-			z.Unlock()
-			y.Unlock()
-		}
+
+		y.Lock()
+		z.Lock()
+		time.Sleep(time.Second * time.Duration(rand.Float64()))
+		z.Unlock()
+		y.Unlock()
+
 		ch <- true
 	}()
 
 	go func() {
 		NewRoutine()
-		for i := 0; i < 10; i++ {
-			z.Lock()
-			x.Lock()
-			time.Sleep(time.Second * time.Duration(rand.Float64()))
-			x.Unlock()
-			z.Unlock()
-		}
+		z.Lock()
+		x.Lock()
+		time.Sleep(time.Second * time.Duration(rand.Float64()))
+		x.Unlock()
+		z.Unlock()
+
 		ch <- true
 	}()
 
 	<-ch
+	<-ch
+	<-ch
+
+}
+
+func TestPotentialDeadlockGuardLocks(t *testing.T) {
+	Initialize()
+	defer Finalize()
+
+	x := NewLock()
+	y := NewLock()
+	z := NewLock()
+	ch := make(chan bool, 2)
+
+	go func() {
+		NewRoutine()
+
+		z.Lock()
+		x.Lock()
+		y.Lock()
+		time.Sleep(time.Second * time.Duration(rand.Float64()))
+		y.Unlock()
+		x.Unlock()
+		z.Unlock()
+
+		ch <- true
+	}()
+
+	go func() {
+		NewRoutine()
+
+		z.Lock()
+		y.Lock()
+		x.Lock()
+		time.Sleep(time.Second * time.Duration(rand.Float64()))
+		x.Unlock()
+		y.Unlock()
+		z.Unlock()
+
+		ch <- true
+	}()
+
 	<-ch
 	<-ch
 

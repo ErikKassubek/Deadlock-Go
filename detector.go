@@ -29,9 +29,9 @@ import (
 
 // colors for deadlock messages
 const (
-	Yellow = "\033[1;33m%s\033[0m"
-	Red    = "\033[1;31m%s\033[0m"
-	Blue   = "\033[0;36m%s\033[0m"
+	yellow = "\033[1;33m%s\033[0m"
+	red    = "\033[1;31m%s\033[0m"
+	blue   = "\033[0;36m%s\033[0m"
 )
 
 type detector struct {
@@ -201,24 +201,24 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 // output deadlocks detected from current status
 // current chain will be the whole cycle
 func reportDeadlockPeriodical(stack *depStack) {
-	fmt.Printf(Red, "DEADLOCK\n\n")
-	fmt.Printf(Yellow, "Initialization of locks involved in deadlock\n\n")
+	fmt.Printf(red, "DEADLOCK\n\n")
+	fmt.Printf(yellow, "Initialization of locks involved in deadlock\n\n")
 	for ds := stack.list.next; ds != nil; ds = ds.next {
 		cont := ds.depEntry.lock.context[0]
 		fmt.Println(cont.file, cont.line)
 	}
-	fmt.Printf(Yellow, "\n\nCalls of locks involved in deadlock\n")
+	fmt.Printf(yellow, "\n\nCalls of locks involved in deadlock\n")
 	for ds := stack.list.next; ds != nil; ds = ds.next {
 		for i, caller := range ds.depEntry.lock.context {
 			if i == 0 {
 				if Opts.CollectCallStack {
-					fmt.Printf(Blue, "\nCallStacks for lock created at: ")
+					fmt.Printf(blue, "\nCallStacks for lock created at: ")
 				} else {
-					fmt.Printf(Blue, "\nCalls for lock created at: ")
+					fmt.Printf(blue, "\nCalls for lock created at: ")
 				}
-				fmt.Printf(Blue, caller.file)
-				fmt.Printf(Blue, ":")
-				fmt.Printf(Blue, fmt.Sprint(caller.line))
+				fmt.Printf(blue, caller.file)
+				fmt.Printf(blue, ":")
+				fmt.Printf(blue, fmt.Sprint(caller.line))
 				fmt.Print("\n")
 			} else {
 				if Opts.CollectCallStack {
@@ -309,8 +309,8 @@ func (d *detector) dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 }
 
 func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
-	fmt.Printf(Red, "POTENTIAL DEADLOCK\n\n")
-	fmt.Printf(Yellow, "Initialization of locks involved in potential deadlock:\n\n")
+	fmt.Printf(red, "POTENTIAL DEADLOCK\n\n")
+	fmt.Printf(yellow, "Initialization of locks involved in potential deadlock:\n\n")
 	for cl := stack.list.next; cl != nil; cl = cl.next {
 		for _, c := range cl.depEntry.lock.context {
 			if c.create {
@@ -325,13 +325,13 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 	}
 
 	if Opts.CollectCallStack {
-		fmt.Printf(Yellow, "\nCallStacks of Locks involved in potential deadlock:\n\n")
+		fmt.Printf(yellow, "\nCallStacks of Locks involved in potential deadlock:\n\n")
 		for cl := stack.list.next; cl != nil; cl = cl.next {
 			cont := cl.depEntry.lock.context
-			fmt.Printf(Blue, "CallStacks for lock created at: ")
-			fmt.Printf(Blue, cont[0].file)
-			fmt.Printf(Blue, ":")
-			fmt.Printf(Blue, fmt.Sprint(cont[0].line))
+			fmt.Printf(blue, "CallStacks for lock created at: ")
+			fmt.Printf(blue, cont[0].file)
+			fmt.Printf(blue, ":")
+			fmt.Printf(blue, fmt.Sprint(cont[0].line))
 			fmt.Print("\n")
 			for i, c := range cont {
 				if i != 0 {
@@ -341,10 +341,10 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 			fmt.Print("\n\n")
 		}
 		cont := dep.lock.context
-		fmt.Printf(Blue, "CallStacks for lock created at: ")
-		fmt.Printf(Blue, cont[0].file)
-		fmt.Printf(Blue, ":")
-		fmt.Printf(Blue, fmt.Sprint(cont[0].line))
+		fmt.Printf(blue, "CallStacks for lock created at: ")
+		fmt.Printf(blue, cont[0].file)
+		fmt.Printf(blue, ":")
+		fmt.Printf(blue, fmt.Sprint(cont[0].line))
 		fmt.Print("\n")
 		for i, c := range cont {
 			if i == 0 {
@@ -353,14 +353,14 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 			fmt.Println(c.callStacks)
 		}
 	} else {
-		fmt.Printf(Yellow, "\nCalls of locks involved in potential deadlock:\n\n")
+		fmt.Printf(yellow, "\nCalls of locks involved in potential deadlock:\n\n")
 		for cl := stack.list.next; cl != nil; cl = cl.next {
 			for i, c := range cl.depEntry.lock.context {
 				if i == 0 {
-					fmt.Printf(Blue, "Calls for lock created at: ")
-					fmt.Printf(Blue, c.file)
-					fmt.Printf(Blue, ":")
-					fmt.Printf(Blue, fmt.Sprint(c.line))
+					fmt.Printf(blue, "Calls for lock created at: ")
+					fmt.Printf(blue, c.file)
+					fmt.Printf(blue, ":")
+					fmt.Printf(blue, fmt.Sprint(c.line))
 					fmt.Printf("\n")
 				} else {
 					fmt.Println(c.file, c.line)
@@ -370,10 +370,10 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 		}
 		for i, c := range dep.lock.context {
 			if i == 0 {
-				fmt.Printf(Blue, "Calls for lock created at: ")
-				fmt.Printf(Blue, c.file)
-				fmt.Printf(Blue, ":")
-				fmt.Printf(Blue, fmt.Sprint(c.line))
+				fmt.Printf(blue, "Calls for lock created at: ")
+				fmt.Printf(blue, c.file)
+				fmt.Printf(blue, ":")
+				fmt.Printf(blue, fmt.Sprint(c.line))
 				fmt.Printf("\n")
 			} else {
 				fmt.Println(c.file, c.line)
