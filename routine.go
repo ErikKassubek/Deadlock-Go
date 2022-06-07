@@ -47,19 +47,20 @@ func NewRoutine() {
 		holdingCount:  0,
 		holdingSet:    make([]*mutex, Opts.MaxHoldingDepth),
 		dependencyMap: make(map[uintptr]*[]*dependency),
-		dependencies:  make([]*dependency, Opts.MaxHoldingDepth),
+		dependencies:  make([]*dependency, Opts.MaxDependencies),
 		curDep:        nil,
 		depCount:      0,
 	}
 	if routinesIndex >= Opts.MaxRoutines {
-		panic("Number of routines is greater than max number of routines. Increase Opts.MaxRoutines.")
+		panic(`Number of routines is greater than max number of routines. 
+			Increase Opts.MaxRoutines.`)
 	}
 	routines[routinesIndex] = r
 	mapIndexLock.Lock()
 	mapIndex[goid.Get()] = routinesIndex
 	mapIndexLock.Unlock()
 	routinesIndex++
-	for i := 0; i < Opts.MaxHoldingDepth; i++ {
+	for i := 0; i < Opts.MaxDependencies; i++ {
 		dep := newDependency(nil, 0, nil)
 		r.dependencies[i] = &dep
 	}
@@ -84,9 +85,15 @@ func (r *routine) updateLock(m *mutex) {
 
 		isDepSet := true // TODO: remove if replaced by check if callside is necessary
 
+		panicMassage := `Number of dependencies is greater than max number of 
+			dependencies. Increase Opts.MaxDependencies.`
+
 		if ok {
 			dhl = *d
 			if r.hasEntryDhl(m, &dhl, dep) {
+				if r.depCount >= Opts.MaxDependencies {
+					panic(panicMassage)
+				}
 				dep = r.dependencies[r.depCount]
 				r.depCount++
 				dep.update(m, &currentHolding, hc)
@@ -95,6 +102,9 @@ func (r *routine) updateLock(m *mutex) {
 				isDepSet = false
 			}
 		} else {
+			if r.depCount >= Opts.MaxDependencies {
+				panic(panicMassage)
+			}
 			dep = r.dependencies[r.depCount]
 			r.depCount++
 			dep.update(m, &currentHolding, hc)
@@ -113,7 +123,8 @@ func (r *routine) updateLock(m *mutex) {
 		}
 	}
 	if hc >= Opts.MaxHoldingDepth {
-		panic("Holding Count is grater than maximum holding depth. Increase Opts.MaxHoldingDepth.")
+		panic(`Holding Count is grater than maximum holding depth. Increase 
+			Opts.MaxHoldingDepth.`)
 	}
 	currentHolding[hc] = m
 	r.holdingCount++
@@ -135,6 +146,18 @@ func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency),
 		}
 	}
 	return false
+}
+
+// update if tryLock is successfully
+// this only updates the holding set
+func (r *routine) updateTryLock(m *mutex) {
+	hc := r.holdingCount
+	if hc >= Opts.MaxHoldingDepth {
+		panic(`Holding Count is grater than maximum holding depth. Increase 
+			Opts.MaxHoldingDepth.`)
+	}
+	r.holdingSet[hc] = m
+	r.holdingCount++
 }
 
 // update the routine structure is a mutex is released

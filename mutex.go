@@ -51,6 +51,26 @@ func (m *mutex) Lock() {
 
 }
 
+// Trylock mutex m
+func (m *mutex) TryLock() bool {
+	res := m.mu.TryLock()
+
+	if !Opts.RunDetection {
+		return res
+	}
+
+	index := getRoutineIndex()
+	r := &routines[index]
+
+	// update data structures if more than on routine is running
+	if runtime.NumGoroutine() > 1 {
+		if res {
+			(*r).updateTryLock(m)
+		}
+	}
+	return res
+}
+
 // Unlock mutex m
 func (m *mutex) Unlock() {
 	defer m.mu.Unlock()

@@ -41,5 +41,5 @@ var Opts = struct {
 	PeriodicDetectionTime:  time.Second * 2,
 	MaxDependencies:        4096,
 	MaxHoldingDepth:        128,
-	MaxRoutines:            265,
+	MaxRoutines:            1024,
 }
