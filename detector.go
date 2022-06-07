@@ -370,7 +370,7 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 		}
 		for i, c := range dep.lock.context {
 			if i == 0 {
-				fmt.Printf(blue, "Calls for lock created at: ")
+				fmt.Printf(blue, "Calls for lock created at000: ")
 				fmt.Printf(blue, c.file)
 				fmt.Printf(blue, ":")
 				fmt.Printf(blue, fmt.Sprint(c.line))

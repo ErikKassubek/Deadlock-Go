@@ -70,6 +70,8 @@ func (r *routine) updateLock(m *mutex) {
 	currentHolding := r.holdingSet
 	hc := r.holdingCount
 
+	isDepSet := true
+
 	// if lock is not a single level lock
 	if hc > 0 {
 		// found nested lock
@@ -81,8 +83,6 @@ func (r *routine) updateLock(m *mutex) {
 		var dep *dependency
 
 		d, ok := depMap[key]
-
-		isDepSet := true
 
 		panicMassage := `Number of dependencies is greater than max number of 
 			dependencies. Increase Opts.MaxDependencies.`
@@ -113,20 +113,21 @@ func (r *routine) updateLock(m *mutex) {
 
 		// update current dependency
 		r.curDep = dep
-
-		if isDepSet {
-			_, file, line, _ := runtime.Caller(2)
-			var bufString string
-			if Opts.CollectCallStack {
-				// check whether it is necessary to collect the callStack
-				buf := make([]byte, Opts.MaxCallStackSize)
-				n := runtime.Stack(buf[:], false)
-				bufString = string(buf[:n])
-			}
-
-			m.context = append(m.context, newInfo(file, line, false, bufString))
-		}
 	}
+
+	if isDepSet && (hc > 0 || Opts.CollectSingleLevelLockStack) {
+		_, file, line, _ := runtime.Caller(2)
+		var bufString string
+		if Opts.CollectCallStack {
+			// check whether it is necessary to collect the callStack
+			buf := make([]byte, Opts.MaxCallStackSize)
+			n := runtime.Stack(buf[:], false)
+			bufString = string(buf[:n])
+		}
+
+		m.context = append(m.context, newInfo(file, line, false, bufString))
+	}
+
 	if hc >= Opts.MaxHoldingDepth {
 		panic(`Holding Count is grater than maximum holding depth. Increase 
 			Opts.MaxHoldingDepth.`)

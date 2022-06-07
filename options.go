@@ -32,6 +32,9 @@ var Opts = struct {
 	// acquisition are collected and displayed. Otherwise only file names and
 	// lines are collected
 	CollectCallStack bool
+	// If CollectSingleLevelLockStack is set to true, stack traces for single
+	// level locks are collected. Otherwise not.
+	CollectSingleLevelLockStack bool
 	// maximum number of dependencies
 	MaxDependencies int
 	// The maximum depth of a nested lock tree
@@ -41,13 +44,14 @@ var Opts = struct {
 	// The maximum byte size for callStacks
 	MaxCallStackSize int
 }{
-	RunDetection:           true,
-	PeriodicDetection:      true,
-	ComprehensiveDetection: true,
-	PeriodicDetectionTime:  time.Second * 2,
-	CollectCallStack:       false,
-	MaxDependencies:        4096,
-	MaxHoldingDepth:        128,
-	MaxRoutines:            1024,
-	MaxCallStackSize:       2048,
+	RunDetection:                true,
+	PeriodicDetection:           true,
+	ComprehensiveDetection:      true,
+	PeriodicDetectionTime:       time.Second * 2,
+	CollectCallStack:            false,
+	CollectSingleLevelLockStack: false,
+	MaxDependencies:             4096,
+	MaxHoldingDepth:             128,
+	MaxRoutines:                 1024,
+	MaxCallStackSize:            2048,
 }
