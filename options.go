@@ -28,18 +28,26 @@ var Opts = struct {
 	ComprehensiveDetection bool
 	// Set how often the periodic detection is run
 	PeriodicDetectionTime time.Duration
+	// If CollectCallStack is true, the CallStack for lock creation and
+	// acquisition are collected and displayed. Otherwise only file names and
+	// lines are collected
+	CollectCallStack bool
 	// maximum number of dependencies
 	MaxDependencies int
 	// The maximum depth of a nested lock tree
 	MaxHoldingDepth int
 	// The maximum number of routines
 	MaxRoutines int
+	// The maximum byte size for callStacks
+	MaxCallStackSize int
 }{
 	RunDetection:           true,
 	PeriodicDetection:      true,
 	ComprehensiveDetection: true,
 	PeriodicDetectionTime:  time.Second * 2,
+	CollectCallStack:       false,
 	MaxDependencies:        4096,
 	MaxHoldingDepth:        128,
 	MaxRoutines:            1024,
+	MaxCallStackSize:       2048,
 }

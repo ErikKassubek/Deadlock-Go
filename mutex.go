@@ -28,7 +28,13 @@ type mutex struct {
 // create Lock
 func NewLock() (m mutex) {
 	_, file, line, _ := runtime.Caller(1)
-	m.context = append(m.context, newInfo(file, line, true))
+	var bufString string
+	if Opts.CollectCallStack {
+		buf := make([]byte, Opts.MaxCallStackSize)
+		n := runtime.Stack(buf[:], false)
+		bufString = string(buf[:n])
+	}
+	m.context = append(m.context, newInfo(file, line, true, bufString))
 	return m
 }
 

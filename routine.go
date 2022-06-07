@@ -116,7 +116,15 @@ func (r *routine) updateLock(m *mutex) {
 
 		if isDepSet {
 			_, file, line, _ := runtime.Caller(2)
-			m.context = append(m.context, newInfo(file, line, false))
+			var bufString string
+			if Opts.CollectCallStack {
+				// check whether it is necessary to collect the callStack
+				buf := make([]byte, Opts.MaxCallStackSize)
+				n := runtime.Stack(buf[:], false)
+				bufString = string(buf[:n])
+			}
+
+			m.context = append(m.context, newInfo(file, line, false, bufString))
 		}
 	}
 	if hc >= Opts.MaxHoldingDepth {
