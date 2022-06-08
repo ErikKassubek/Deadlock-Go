@@ -15,11 +15,13 @@ and periodically run the periodical deadlock detection.
 */
 
 import (
+	"fmt"
 	"time"
 )
 
 // initialize deadlock detector
-func Initialize() {
+func init() {
+	fmt.Println("i")
 	mapIndex = make(map[int64]int)
 
 	// if periodical detection is disabled
