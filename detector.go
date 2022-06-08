@@ -397,5 +397,6 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 		}
 
 	}
+	fmt.Print("\n\n")
 
 }
