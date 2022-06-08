@@ -19,7 +19,7 @@ import (
 )
 
 // initialize deadlock detector
-func init() {
+func Initialize() {
 	mapIndex = make(map[int64]int)
 
 	// if periodical detection is disabled

@@ -44,6 +44,21 @@ func newDetector() detector {
 	return detector{deadlockFound: 0}
 }
 
+func FindPotentialDeadlocks() {
+	if !Opts.ComprehensiveDetection {
+		return
+	}
+
+	detector := newDetector()
+	if routinesIndex > 1 {
+		detector.routineIndex = routinesIndex
+		if detector.preCheck() < 2 {
+			return
+		}
+		detector.detect()
+	}
+}
+
 // run periodical deadlock detection check
 func periodicalDetection(stack *depStack) {
 	// only check if at least two routines are running
