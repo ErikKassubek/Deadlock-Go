@@ -18,15 +18,19 @@ import (
 	"time"
 )
 
+// it is not possible to set options after initialization
+var initialized = false
+
 // initialize deadlock detector
 func Initialize() {
+	initialized = true
 	// if periodical detection is disabled
-	if !Opts.PeriodicDetection {
+	if !opts.periodicDetection {
 		return
 	}
 
 	go func() {
-		timer := time.NewTicker(Opts.PeriodicDetectionTime)
+		timer := time.NewTicker(opts.periodicDetectionTime)
 		stack := newDepStack()
 
 		for {
@@ -36,4 +40,5 @@ func Initialize() {
 			}
 		}
 	}()
+
 }

@@ -17,41 +17,152 @@ well as the periodical detection time and max values for the detection.
 
 import "time"
 
-// Opts controls how the detection behaves
-var Opts = struct {
-	// If RunDetection is set to false, no detection is disabled
-	RunDetection bool
-	// If PeriodicDetection is set to false, periodic detection is disabled
-	PeriodicDetection bool
-	// If ComprehensiveDetection is set to false, comprehensive detection at
+// opts controls how the detection behaves
+var opts = struct {
+	// If periodicDetection is set to false, periodic detection is disabled
+	periodicDetection bool
+	// If comprehensiveDetection is set to false, comprehensive detection at
 	// the end of the program is disabled
-	ComprehensiveDetection bool
+	comprehensiveDetection bool
 	// Set how often the periodic detection is run
-	PeriodicDetectionTime time.Duration
-	// If CollectCallStack is true, the CallStack for lock creation and
+	periodicDetectionTime time.Duration
+	// If collectCallStack is true, the CallStack for lock creation and
 	// acquisition are collected and displayed. Otherwise only file names and
 	// lines are collected
-	CollectCallStack bool
-	// If CollectSingleLevelLockStack is set to true, stack traces for single
+	collectCallStack bool
+	// If collectSingleLevelLockStack is set to true, stack traces for single
 	// level locks are collected. Otherwise not.
-	CollectSingleLevelLockStack bool
+	collectSingleLevelLockStack bool
 	// maximum number of dependencies
-	MaxDependencies int
+	maxDependencies int
 	// The maximum depth of a nested lock tree
-	MaxHoldingDepth int
+	maxHoldingDepth int
 	// The maximum number of routines
-	MaxRoutines int
+	maxRoutines int
 	// The maximum byte size for callStacks
-	MaxCallStackSize int
+	maxCallStackSize int
 }{
-	RunDetection:                true,
-	PeriodicDetection:           true,
-	ComprehensiveDetection:      true,
-	PeriodicDetectionTime:       time.Second * 2,
-	CollectCallStack:            false,
-	CollectSingleLevelLockStack: false,
-	MaxDependencies:             4096,
-	MaxHoldingDepth:             128,
-	MaxRoutines:                 1024,
-	MaxCallStackSize:            2048,
+	periodicDetection:           true,
+	comprehensiveDetection:      true,
+	periodicDetectionTime:       time.Second * 2,
+	collectCallStack:            false,
+	collectSingleLevelLockStack: false,
+	maxDependencies:             4096,
+	maxHoldingDepth:             128,
+	maxRoutines:                 1024,
+	maxCallStackSize:            2048,
+}
+
+// Enable or disable periodic detection
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetPeriodicDetection(enable bool) bool {
+	if initialized {
+		return false
+	}
+	opts.periodicDetection = enable
+	return true
+}
+
+// Enable or disable comprehensive detection
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetComprehensiveDetection(enable bool) bool {
+	if initialized {
+		return false
+	}
+	opts.comprehensiveDetection = enable
+	return true
+}
+
+// Set the periodic detection time in second
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetPeriodicDetectionTime(seconds int) bool {
+	if initialized {
+		return false
+	}
+	opts.periodicDetectionTime = time.Second * time.Duration(seconds)
+	return true
+}
+
+// Enable or disable collection of full call stacks
+// If it is disabled only file and line numbers are collected
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetCollectCallStack(enable bool) bool {
+	if initialized {
+		return false
+	}
+	opts.collectCallStack = enable
+	return true
+}
+
+// Enable or disable collection of call information for single level locks
+// If it is disabled only file and line numbers are collected
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetCollectSingleLevelLockStack(enable bool) bool {
+	if initialized {
+		return false
+	}
+	opts.collectSingleLevelLockStack = enable
+	return true
+}
+
+// Set the max number of dependencies
+// If it is disabled only file and line numbers are collected
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetMaxDependencies(number int) bool {
+	if initialized {
+		return false
+	}
+	opts.maxDependencies = number
+	return true
+}
+
+// Set the max depth of a nested lock tree
+// If it is disabled only file and line numbers are collected
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetMaxHoldingDepth(number int) bool {
+	if initialized {
+		return false
+	}
+	opts.maxHoldingDepth = number
+	return true
+}
+
+// Set the max number of routines
+// If it is disabled only file and line numbers are collected
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetMaxRoutines(number int) bool {
+	if initialized {
+		return false
+	}
+	opts.maxRoutines = number
+	return true
+}
+
+// Set the max size of collected call stacks
+// If it is disabled only file and line numbers are collected
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetMaxCallStackSize(number int) bool {
+	if initialized {
+		return false
+	}
+	opts.maxCallStackSize = number
+	return true
 }

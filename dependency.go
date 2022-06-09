@@ -29,7 +29,7 @@ func newDependency(lock *mutex, numberOfLocks int,
 	d := dependency{
 		lock:         lock,
 		holdingCount: numberOfLocks,
-		holdingSet:   make([]*mutex, Opts.MaxHoldingDepth),
+		holdingSet:   make([]*mutex, opts.maxHoldingDepth),
 	}
 
 	for i := 0; i < numberOfLocks; i++ {

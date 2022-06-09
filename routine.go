@@ -25,7 +25,7 @@ import (
 
 var mapIndex = make(map[int64]int)
 var mapIndexLock sync.Mutex
-var routines = make([]routine, Opts.MaxRoutines)
+var routines = make([]routine, opts.maxRoutines)
 var routinesIndex = 0
 
 // type to implement structures for lock logging
@@ -41,16 +41,19 @@ type routine struct {
 
 // Initialize the go routine
 func NewRoutine() {
+	if !opts.periodicDetection && !opts.comprehensiveDetection {
+		return
+	}
 	r := routine{
 		index:         routinesIndex,
 		holdingCount:  0,
-		holdingSet:    make([]*mutex, Opts.MaxHoldingDepth),
+		holdingSet:    make([]*mutex, opts.maxHoldingDepth),
 		dependencyMap: make(map[uintptr]*[]*dependency),
-		dependencies:  make([]*dependency, Opts.MaxDependencies),
+		dependencies:  make([]*dependency, opts.maxDependencies),
 		curDep:        nil,
 		depCount:      0,
 	}
-	if routinesIndex >= Opts.MaxRoutines {
+	if routinesIndex >= opts.maxRoutines {
 		panic(`Number of routines is greater than max number of routines. 
 			Increase Opts.MaxRoutines.`)
 	}
@@ -59,7 +62,7 @@ func NewRoutine() {
 	mapIndex[goid.Get()] = routinesIndex
 	mapIndexLock.Unlock()
 	routinesIndex++
-	for i := 0; i < Opts.MaxDependencies; i++ {
+	for i := 0; i < opts.maxDependencies; i++ {
 		dep := newDependency(nil, 0, nil)
 		r.dependencies[i] = &dep
 	}
@@ -90,7 +93,7 @@ func (r *routine) updateLock(m *mutex) {
 		if ok {
 			dhl = *d
 			if r.hasEntryDhl(m, &dhl, dep) {
-				if r.depCount >= Opts.MaxDependencies {
+				if r.depCount >= opts.maxDependencies {
 					panic(panicMassage)
 				}
 				dep = r.dependencies[r.depCount]
@@ -101,7 +104,7 @@ func (r *routine) updateLock(m *mutex) {
 				isDepSet = false
 			}
 		} else {
-			if r.depCount >= Opts.MaxDependencies {
+			if r.depCount >= opts.maxDependencies {
 				panic(panicMassage)
 			}
 			dep = r.dependencies[r.depCount]
@@ -115,12 +118,12 @@ func (r *routine) updateLock(m *mutex) {
 		r.curDep = dep
 	}
 
-	if isDepSet && (hc > 0 || Opts.CollectSingleLevelLockStack) {
+	if isDepSet && (hc > 0 || opts.collectSingleLevelLockStack) {
 		_, file, line, _ := runtime.Caller(2)
 		var bufString string
-		if Opts.CollectCallStack {
+		if opts.collectCallStack {
 			// check whether it is necessary to collect the callStack
-			buf := make([]byte, Opts.MaxCallStackSize)
+			buf := make([]byte, opts.maxCallStackSize)
 			n := runtime.Stack(buf[:], false)
 			bufString = string(buf[:n])
 		}
@@ -128,7 +131,7 @@ func (r *routine) updateLock(m *mutex) {
 		m.context = append(m.context, newInfo(file, line, false, bufString))
 	}
 
-	if hc >= Opts.MaxHoldingDepth {
+	if hc >= opts.maxHoldingDepth {
 		panic(`Holding Count is grater than maximum holding depth. Increase 
 			Opts.MaxHoldingDepth.`)
 	}
@@ -158,7 +161,7 @@ func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency),
 // this only updates the holding set
 func (r *routine) updateTryLock(m *mutex) {
 	hc := r.holdingCount
-	if hc >= Opts.MaxHoldingDepth {
+	if hc >= opts.maxHoldingDepth {
 		panic(`Holding Count is grater than maximum holding depth. Increase 
 			Opts.MaxHoldingDepth.`)
 	}

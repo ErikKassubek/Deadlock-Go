@@ -45,7 +45,7 @@ func newDetector() detector {
 }
 
 func FindPotentialDeadlocks() {
-	if !Opts.ComprehensiveDetection {
+	if !opts.comprehensiveDetection {
 		return
 	}
 
@@ -66,7 +66,7 @@ func periodicalDetection(stack *depStack) {
 		return
 	}
 
-	lastHolding := make([](*mutex), Opts.MaxRoutines)
+	lastHolding := make([](*mutex), opts.maxRoutines)
 	candidates := 0 // number of threads holding locks
 	sthNew := false
 
@@ -116,7 +116,7 @@ func checkNew(lastHolding *([](*mutex)), sthNew *bool, candidates *int) {
 // analyses the current state for deadlocks
 func detectionPeriodical(lastHolding [](*mutex), stack *depStack) (ret bool) {
 	ret = false
-	isTraversed := make([]bool, Opts.MaxRoutines)
+	isTraversed := make([]bool, opts.maxRoutines)
 
 	for index, r := range routines {
 		if r.curDep == nil || r.index < 0 {
@@ -227,7 +227,7 @@ func reportDeadlockPeriodical(stack *depStack) {
 	for ds := stack.list.next; ds != nil; ds = ds.next {
 		for i, caller := range ds.depEntry.lock.context {
 			if i == 0 {
-				if Opts.CollectCallStack {
+				if opts.collectCallStack {
 					fmt.Printf(blue, "\nCallStacks for lock created at: ")
 				} else {
 					fmt.Printf(blue, "\nCalls for lock created at: ")
@@ -237,7 +237,7 @@ func reportDeadlockPeriodical(stack *depStack) {
 				fmt.Printf(blue, fmt.Sprint(caller.line))
 				fmt.Print("\n")
 			} else {
-				if Opts.CollectCallStack {
+				if opts.collectCallStack {
 					fmt.Println(caller.callStacks)
 				} else {
 					fmt.Println(caller.file, ":", caller.line)
@@ -340,7 +340,7 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 		}
 	}
 
-	if Opts.CollectCallStack {
+	if opts.collectCallStack {
 		fmt.Printf(yellow, "\nCallStacks of Locks involved in potential deadlock:\n\n")
 		for cl := stack.list.next; cl != nil; cl = cl.next {
 			cont := cl.depEntry.lock.context

@@ -29,8 +29,8 @@ type mutex struct {
 func NewLock() (m mutex) {
 	_, file, line, _ := runtime.Caller(1)
 	var bufString string
-	if Opts.CollectCallStack {
-		buf := make([]byte, Opts.MaxCallStackSize)
+	if opts.collectCallStack {
+		buf := make([]byte, opts.maxCallStackSize)
 		n := runtime.Stack(buf[:], false)
 		bufString = string(buf[:n])
 	}
@@ -43,7 +43,7 @@ func (m *mutex) Lock() {
 	defer m.mu.Lock()
 
 	// if detection is disabled
-	if !Opts.RunDetection {
+	if !opts.periodicDetection && !opts.comprehensiveDetection {
 		return
 	}
 
@@ -61,7 +61,7 @@ func (m *mutex) Lock() {
 func (m *mutex) TryLock() bool {
 	res := m.mu.TryLock()
 
-	if !Opts.RunDetection {
+	if !opts.periodicDetection && !opts.comprehensiveDetection {
 		return res
 	}
 
@@ -80,6 +80,10 @@ func (m *mutex) TryLock() bool {
 // Unlock mutex m
 func (m *mutex) Unlock() {
 	defer m.mu.Unlock()
+
+	if !opts.periodicDetection && !opts.comprehensiveDetection {
+		return
+	}
 
 	index := getRoutineIndex()
 
