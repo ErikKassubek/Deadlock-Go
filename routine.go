@@ -181,5 +181,8 @@ func (r *routine) updateUnlock(m *mutex) {
 // get the index of the routine
 func getRoutineIndex() int {
 	id := goid.Get()
-	return mapIndex[id]
+	mapIndexLock.Lock()
+	index := mapIndex[id]
+	mapIndexLock.Unlock()
+	return index
 }
