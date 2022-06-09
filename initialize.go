@@ -20,8 +20,6 @@ import (
 
 // initialize deadlock detector
 func Initialize() {
-	mapIndex = make(map[int64]int)
-
 	// if periodical detection is disabled
 	if !Opts.PeriodicDetection {
 		return

@@ -23,7 +23,7 @@ import (
 	"github.com/petermattis/goid"
 )
 
-var mapIndex map[int64]int
+var mapIndex = make(map[int64]int)
 var mapIndexLock sync.Mutex
 var routines = make([]routine, Opts.MaxRoutines)
 var routinesIndex = 0
