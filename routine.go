@@ -34,10 +34,10 @@ type routine struct {
 	holdingCount              int        // number of currently hold locks
 	holdingSet                [](*mutex) // set of currently hold locks
 	dependencyMap             map[uintptr]*[]*dependency
-	dependencies              [](*dependency) // pre-allocated dependencies
-	curDep                    *dependency     // current dependency
-	depCount                  int             // counter for dependencies
-	collectedSingleLevelLocks []callerInfo    // info about collected single level locks
+	dependencies              [](*dependency)  // pre-allocated dependencies
+	curDep                    *dependency      // current dependency
+	depCount                  int              // counter for dependencies
+	collectedSingleLevelLocks map[string][]int // info about collected single level locks
 }
 
 // Initialize the go routine
@@ -47,13 +47,14 @@ func NewRoutine() {
 	}
 	createRoutineLock.Lock()
 	r := routine{
-		index:         routinesIndex,
-		holdingCount:  0,
-		holdingSet:    make([]*mutex, opts.maxHoldingDepth),
-		dependencyMap: make(map[uintptr]*[]*dependency),
-		dependencies:  make([]*dependency, opts.maxDependencies),
-		curDep:        nil,
-		depCount:      0,
+		index:                     routinesIndex,
+		holdingCount:              0,
+		holdingSet:                make([]*mutex, opts.maxHoldingDepth),
+		dependencyMap:             make(map[uintptr]*[]*dependency),
+		dependencies:              make([]*dependency, opts.maxDependencies),
+		curDep:                    nil,
+		depCount:                  0,
+		collectedSingleLevelLocks: make(map[string][]int),
 	}
 	if routinesIndex >= opts.maxRoutines {
 		panic(`Number of routines is greater than max number of routines. 
@@ -74,7 +75,7 @@ func (r *routine) updateLock(m *mutex) {
 	currentHolding := r.holdingSet
 	hc := r.holdingCount
 
-	isDepSet := true
+	isNew := false
 
 	// if lock is not a single level lock
 	if hc > 0 {
@@ -98,48 +99,57 @@ func (r *routine) updateLock(m *mutex) {
 					panic(panicMassage)
 				}
 				dep = r.dependencies[r.depCount]
-			} else {
-				isDepSet = false
+				isNew = true
 			}
 		} else {
 			if r.depCount >= opts.maxDependencies {
 				panic(panicMassage)
 			}
 			dep = r.dependencies[r.depCount]
+			isNew = true
 		}
-		if isDepSet {
+		if isNew {
 			r.depCount++
 			dep.update(m, &currentHolding, hc)
 			dhl = append(dhl, dep)
 			r.dependencyMap[key] = &dhl
+			r.curDep = dep
 		}
 
-		// update current dependency
-		r.curDep = dep
 	} else {
 		// save information on single level locks if enabled in the options
 		// to avoid creating the caller info multiple times
 		if opts.collectSingleLevelLockStack {
 			_, file, line, _ := runtime.Caller(2)
-			for _, c := range r.collectedSingleLevelLocks {
-				if c.file == file && c.line == line {
-					isDepSet = false
-					break
+			if lines, ok := r.collectedSingleLevelLocks[file]; ok {
+				isNew = true
+				for _, l := range lines {
+					if l == line {
+						isNew = false
+						break
+					}
 				}
+				if isNew {
+					r.collectedSingleLevelLocks[file] = append(
+						r.collectedSingleLevelLocks[file], line)
+				}
+			} else {
+				isNew = true
+				r.collectedSingleLevelLocks[file] = []int{line}
 			}
-			caller := newInfo(file, line, false, "")
-			r.collectedSingleLevelLocks = append(r.collectedSingleLevelLocks,
-				caller)
 		}
 	}
 
-	if isDepSet && (hc > 0 || opts.collectSingleLevelLockStack) {
-		_, file, line, _ := runtime.Caller(2)
+	if isNew && (hc > 0 || opts.collectSingleLevelLockStack) {
 		var bufString string
+		var file string
+		var line int
 		if opts.collectCallStack {
 			buf := make([]byte, opts.maxCallStackSize)
 			n := runtime.Stack(buf[:], false)
 			bufString = string(buf[:n])
+		} else {
+			_, file, line, _ = runtime.Caller(2)
 		}
 
 		m.context = append(m.context, newInfo(file, line, false, bufString))
