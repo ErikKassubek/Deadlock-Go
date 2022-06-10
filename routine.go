@@ -90,9 +90,9 @@ func (r *routine) updateLock(m *mutex) {
 		panicMassage := `Number of dependencies is greater than max number of 
 			dependencies. Increase Opts.MaxDependencies.`
 
-		if ok {
+		if ok { // dependency key already exists
 			dhl = *d
-			if r.hasEntryDhl(m, &dhl, dep) {
+			if r.hasEntryDhl(m, &dhl) {
 				if r.depCount >= opts.maxDependencies {
 					panic(panicMassage)
 				}
@@ -140,8 +140,7 @@ func (r *routine) updateLock(m *mutex) {
 }
 
 // return true, if mutex with same holding count is in the dependency list
-func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency),
-	dep *dependency) bool {
+func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency)) bool {
 	for _, d := range *dhl {
 		hc := r.holdingCount
 		if d.lock == m && d.holdingCount == hc {
