@@ -107,7 +107,7 @@ func SetCollectCallStack(enable bool) bool {
 // Return true if detection was successful
 // Return false if setting was unsuccessful
 // It is not possible to set options after the detector was initialized
-func SetCollectSingleLevelLockStack(enable bool) bool {
+func SetCollectSingleLevelLockInformation(enable bool) bool {
 	if initialized {
 		return false
 	}

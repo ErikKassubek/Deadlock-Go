@@ -54,7 +54,6 @@ func (m *mutex) Lock() {
 	if runtime.NumGoroutine() > 1 {
 		(*r).updateLock(m)
 	}
-
 }
 
 // Trylock mutex m
@@ -87,7 +86,6 @@ func (m *mutex) Unlock() {
 
 	index := getRoutineIndex()
 
-	r := routines[index]
-	r.updateUnlock(m)
-
+	r := &routines[index]
+	(*r).updateUnlock(m)
 }

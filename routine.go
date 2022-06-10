@@ -24,19 +24,20 @@ import (
 )
 
 var mapIndex = make(map[int64]int)
-var mapIndexLock sync.Mutex
+var createRoutineLock sync.Mutex
 var routines = make([]routine, opts.maxRoutines)
 var routinesIndex = 0
 
 // type to implement structures for lock logging
 type routine struct {
-	index         int        // index of the routine
-	holdingCount  int        // number of currently hold locks
-	holdingSet    [](*mutex) // set of currently hold locks
-	dependencyMap map[uintptr]*[]*dependency
-	dependencies  [](*dependency) // pre-allocated dependencies
-	curDep        *dependency     // current dependency
-	depCount      int             // counter for dependencies
+	index                     int        // index of the routine
+	holdingCount              int        // number of currently hold locks
+	holdingSet                [](*mutex) // set of currently hold locks
+	dependencyMap             map[uintptr]*[]*dependency
+	dependencies              [](*dependency) // pre-allocated dependencies
+	curDep                    *dependency     // current dependency
+	depCount                  int             // counter for dependencies
+	collectedSingleLevelLocks []callerInfo    // info about collected single level locks
 }
 
 // Initialize the go routine
@@ -44,6 +45,7 @@ func NewRoutine() {
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
 		return
 	}
+	createRoutineLock.Lock()
 	r := routine{
 		index:         routinesIndex,
 		holdingCount:  0,
@@ -58,10 +60,9 @@ func NewRoutine() {
 			Increase Opts.MaxRoutines.`)
 	}
 	routines[routinesIndex] = r
-	mapIndexLock.Lock()
 	mapIndex[goid.Get()] = routinesIndex
-	mapIndexLock.Unlock()
 	routinesIndex++
+	createRoutineLock.Unlock()
 	for i := 0; i < opts.maxDependencies; i++ {
 		dep := newDependency(nil, 0, nil)
 		r.dependencies[i] = &dep
@@ -92,15 +93,14 @@ func (r *routine) updateLock(m *mutex) {
 
 		if ok { // dependency key already exists
 			dhl = *d
-			if r.hasEntryDhl(m, &dhl) {
+			if !r.hasEntryDhl(m, &dhl) {
 				if r.depCount >= opts.maxDependencies {
 					panic(panicMassage)
 				}
 				dep = r.dependencies[r.depCount]
-				r.depCount++
-				dep.update(m, &currentHolding, hc)
-				dhl = append(dhl, dep)
 			} else {
+				newDep := newDependency(nil, 0, nil)
+				dep = &newDep
 				isDepSet = false
 			}
 		} else {
@@ -108,21 +108,35 @@ func (r *routine) updateLock(m *mutex) {
 				panic(panicMassage)
 			}
 			dep = r.dependencies[r.depCount]
-			r.depCount++
-			dep.update(m, &currentHolding, hc)
-			dhl = append(dhl, dep)
-			depMap[key] = &dhl
 		}
+		r.depCount++
+		dep.update(m, &currentHolding, hc)
+		dhl = append(dhl, dep)
+		r.dependencyMap[key] = &dhl
 
 		// update current dependency
 		r.curDep = dep
+	} else {
+		// save information on single level locks if enabled in the options
+		// to avoid creating the caller info multiple times
+		if opts.collectSingleLevelLockStack {
+			_, file, line, _ := runtime.Caller(2)
+			for _, c := range r.collectedSingleLevelLocks {
+				if c.file == file && c.line == line {
+					isDepSet = false
+					break
+				}
+			}
+			caller := newInfo(file, line, false, "")
+			r.collectedSingleLevelLocks = append(r.collectedSingleLevelLocks,
+				caller)
+		}
 	}
 
 	if isDepSet && (hc > 0 || opts.collectSingleLevelLockStack) {
 		_, file, line, _ := runtime.Caller(2)
 		var bufString string
 		if opts.collectCallStack {
-			// check whether it is necessary to collect the callStack
 			buf := make([]byte, opts.maxCallStackSize)
 			n := runtime.Stack(buf[:], false)
 			bufString = string(buf[:n])
@@ -145,7 +159,7 @@ func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency)) bool {
 		hc := r.holdingCount
 		if d.lock == m && d.holdingCount == hc {
 			i := 0
-			for d.holdingSet[i] == r.holdingSet[i] && i <= hc {
+			for d.holdingSet[i] == r.holdingSet[i] && i < hc {
 				i++
 			}
 			if i == hc {
@@ -183,8 +197,8 @@ func (r *routine) updateUnlock(m *mutex) {
 // get the index of the routine
 func getRoutineIndex() int {
 	id := goid.Get()
-	mapIndexLock.Lock()
+	createRoutineLock.Lock()
 	index := mapIndex[id]
-	mapIndexLock.Unlock()
+	createRoutineLock.Unlock()
 	return index
 }
