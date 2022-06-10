@@ -99,8 +99,6 @@ func (r *routine) updateLock(m *mutex) {
 				}
 				dep = r.dependencies[r.depCount]
 			} else {
-				newDep := newDependency(nil, 0, nil)
-				dep = &newDep
 				isDepSet = false
 			}
 		} else {
@@ -109,10 +107,12 @@ func (r *routine) updateLock(m *mutex) {
 			}
 			dep = r.dependencies[r.depCount]
 		}
-		r.depCount++
-		dep.update(m, &currentHolding, hc)
-		dhl = append(dhl, dep)
-		r.dependencyMap[key] = &dhl
+		if isDepSet {
+			r.depCount++
+			dep.update(m, &currentHolding, hc)
+			dhl = append(dhl, dep)
+			r.dependencyMap[key] = &dhl
+		}
 
 		// update current dependency
 		r.curDep = dep
