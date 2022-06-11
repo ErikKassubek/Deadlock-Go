@@ -67,10 +67,8 @@ func periodicalDetection(stack *depStack, lastHolding *[](*mutex)) {
 	}
 
 	candidates := 0 // number of threads holding locks
+
 	sthNew := false
-
-	checkNew(lastHolding, &sthNew, &candidates)
-
 	for index, r := range routines {
 		holds := r.holdingCount - 1
 		if holds >= 0 && (*lastHolding)[index] != r.holdingSet[holds] {
@@ -93,23 +91,6 @@ func periodicalDetection(stack *depStack, lastHolding *[](*mutex)) {
 		_ = detectionPeriodical(*lastHolding, stack)
 	}
 
-}
-
-// check if something has changed
-func checkNew(lastHolding *([](*mutex)), sthNew *bool, candidates *int) {
-	for index, r := range routines {
-		holds := r.holdingCount - 1
-		if holds >= 0 && (*lastHolding)[index] != r.holdingSet[holds] {
-			(*lastHolding)[index] = r.holdingSet[holds]
-			*sthNew = true
-			if holds > 0 {
-				(*candidates)++
-			}
-		} else if holds < 0 && (*lastHolding)[index] != nil {
-			(*lastHolding)[index] = nil
-			*sthNew = true
-		}
-	}
 }
 
 // analyses the current state for deadlocks
