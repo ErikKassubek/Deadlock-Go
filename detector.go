@@ -60,28 +60,27 @@ func FindPotentialDeadlocks() {
 }
 
 // run periodical deadlock detection check
-func periodicalDetection(stack *depStack) {
+func periodicalDetection(stack *depStack, lastHolding *[](*mutex)) {
 	// only check if at least two routines are running
 	if runtime.NumGoroutine() < 2 {
 		return
 	}
 
-	lastHolding := make([](*mutex), opts.maxRoutines)
 	candidates := 0 // number of threads holding locks
 	sthNew := false
 
-	checkNew(&lastHolding, &sthNew, &candidates)
+	checkNew(lastHolding, &sthNew, &candidates)
 
 	for index, r := range routines {
 		holds := r.holdingCount - 1
-		if holds >= 0 && lastHolding[index] != r.holdingSet[holds] {
-			lastHolding[index] = r.holdingSet[holds]
+		if holds >= 0 && (*lastHolding)[index] != r.holdingSet[holds] {
+			(*lastHolding)[index] = r.holdingSet[holds]
 			sthNew = true
 			if holds > 0 {
 				candidates++
 			}
-		} else if holds < 0 && lastHolding[index] != nil {
-			lastHolding[index] = nil
+		} else if holds < 0 && (*lastHolding)[index] != nil {
+			(*lastHolding)[index] = nil
 			sthNew = true
 		}
 	}
@@ -91,7 +90,7 @@ func periodicalDetection(stack *depStack) {
 		return
 	}
 	if candidates > 1 {
-		_ = detectionPeriodical(lastHolding, stack)
+		_ = detectionPeriodical(*lastHolding, stack)
 	}
 
 }
@@ -163,7 +162,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 				if !sthNew { // nothing changed in cycled threads, deadlock
 					reportDeadlockPeriodical(stack)
 					FindPotentialDeadlocks()
-					os.Exit(0)
+					os.Exit(2)
 				}
 				stack.pop()
 			} else {

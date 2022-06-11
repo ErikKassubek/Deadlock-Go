@@ -15,6 +15,7 @@ the lock and unlock operations for these locks.
 */
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
 )
@@ -48,6 +49,11 @@ func (m *mutex) Lock() {
 	}
 
 	index := getRoutineIndex()
+
+	if index >= routinesIndex {
+		panic(`A Routine  was not initialized. Run NewRoutine() before Lock or TryLock operation`)
+	}
+
 	r := &routines[index]
 
 	// update data structures if more than on routine is running
@@ -65,6 +71,14 @@ func (m *mutex) TryLock() bool {
 	}
 
 	index := getRoutineIndex()
+
+	if index >= routinesIndex {
+		errorString := fmt.Sprintf(`Routine %d was not initialized. Run 
+			NewRoutine() in the corresponding routine before Lock or TryLock 
+			operation`, index)
+		panic(errorString)
+	}
+
 	r := &routines[index]
 
 	// update data structures if more than on routine is running
