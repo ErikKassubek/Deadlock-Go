@@ -35,13 +35,11 @@ const (
 )
 
 type detector struct {
-	deadlockFound int
-	routineIndex  int
 	dependencyMap map[string]*dependency
 }
 
 func newDetector() detector {
-	return detector{deadlockFound: 0}
+	return detector{}
 }
 
 func FindPotentialDeadlocks() {
@@ -51,7 +49,6 @@ func FindPotentialDeadlocks() {
 
 	detector := newDetector()
 	if routinesIndex > 1 {
-		detector.routineIndex = routinesIndex
 		if detector.preCheck() < 2 {
 			return
 		}
@@ -223,6 +220,7 @@ func reportDeadlockPeriodical(stack *depStack) {
 	fmt.Println("")
 }
 
+// get the amount of unique dependencies
 func (d *detector) preCheck() int {
 	depCount := 0
 	var dependencyString string
@@ -244,6 +242,7 @@ func (d *detector) preCheck() int {
 	return depCount
 }
 
+// return a string to represent an dependency
 func getDependencyString(str *string, dep *dependency) {
 	*str = fmt.Sprint(uintptr(unsafe.Pointer(dep.lock)))
 	for i := 0; i < dep.holdingCount; i++ {
@@ -256,7 +255,7 @@ func (d *detector) detect() {
 	var visiting int
 	stack := newDepStack()
 	isTraversed := make([]bool, routinesIndex)
-	for i := 0; i < d.routineIndex; i++ {
+	for i := 0; i < routinesIndex; i++ {
 		routine := routines[i]
 		if routine.depCount == 0 {
 			continue
@@ -272,6 +271,7 @@ func (d *detector) detect() {
 	}
 }
 
+// recursive search for cycles for the comprehensive detection
 func (d *detector) dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 	for i := visiting + 1; i < routinesIndex; i++ {
 		routine := routines[i]
@@ -298,6 +298,7 @@ func (d *detector) dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 	}
 }
 
+//report a found deadlock
 func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 	fmt.Printf(red, "POTENTIAL DEADLOCK\n\n")
 	fmt.Printf(yellow, "Initialization of locks involved in potential deadlock:\n\n")
