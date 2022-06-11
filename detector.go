@@ -88,14 +88,13 @@ func periodicalDetection(stack *depStack, lastHolding *[](*mutex)) {
 		return
 	}
 	if candidates > 1 {
-		_ = detectionPeriodical(*lastHolding, stack)
+		detectionPeriodical(*lastHolding, stack)
 	}
 
 }
 
 // analyses the current state for deadlocks
-func detectionPeriodical(lastHolding [](*mutex), stack *depStack) (ret bool) {
-	ret = false
+func detectionPeriodical(lastHolding [](*mutex), stack *depStack) {
 	isTraversed := make([]bool, opts.maxRoutines)
 
 	for index, r := range routines {
@@ -105,17 +104,15 @@ func detectionPeriodical(lastHolding [](*mutex), stack *depStack) (ret bool) {
 		isTraversed[index] = true
 
 		stack.push(r.curDep, index)
-		ret = ret || dfsPeriodical(stack, index, isTraversed, lastHolding)
+		dfsPeriodical(stack, index, isTraversed, lastHolding)
 		stack.pop()
 		r.curDep = nil
 	}
-	return ret
 }
 
-// depth first search on current dependencies
+// depth first search on current locks
 func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
-	lastHolding []*mutex) bool {
-	ret := false
+	lastHolding []*mutex) {
 	for i := visiting + 1; i < routinesIndex; i++ {
 		r := routines[i]
 		if r.curDep == nil || r.index < 0 {
@@ -127,7 +124,6 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 				continue
 			}
 			if isCycleChain(stack, dep) {
-				ret = true
 				stack.push(dep, i)
 				sthNew := false
 				for cl := stack.list.next; cl != nil; cl = cl.next {
@@ -149,14 +145,12 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 			} else {
 				isTraversed[routinesIndex] = true
 				stack.push(dep, routinesIndex)
-				ret = ret || dfsPeriodical(stack, visiting, isTraversed,
-					lastHolding)
+				dfsPeriodical(stack, visiting, isTraversed, lastHolding)
 				stack.pop()
 				isTraversed[routinesIndex] = false
 			}
 		}
 	}
-	return ret
 }
 
 // check if adding dep to chain will still be a chain
