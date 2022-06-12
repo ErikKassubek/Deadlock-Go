@@ -21,13 +21,13 @@ import (
 )
 
 // type to implement a lock
-type mutex struct {
+type Mutex struct {
 	mu      sync.Mutex
 	context []callerInfo // info about the creation and lock/unlock of this lock
 }
 
 // create Lock
-func NewLock() (m mutex) {
+func NewLock() (m Mutex) {
 	_, file, line, _ := runtime.Caller(1)
 	var bufString string
 	if opts.collectCallStack {
@@ -40,7 +40,7 @@ func NewLock() (m mutex) {
 }
 
 // Lock mutex m
-func (m *mutex) Lock() {
+func (m *Mutex) Lock() {
 	defer m.mu.Lock()
 
 	// if detection is disabled
@@ -70,7 +70,7 @@ func (m *mutex) Lock() {
 }
 
 // Trylock mutex m
-func (m *mutex) TryLock() bool {
+func (m *Mutex) TryLock() bool {
 	res := m.mu.TryLock()
 
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
@@ -102,7 +102,7 @@ func (m *mutex) TryLock() bool {
 }
 
 // Unlock mutex m
-func (m *mutex) Unlock() {
+func (m *Mutex) Unlock() {
 	defer m.mu.Unlock()
 
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
