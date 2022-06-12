@@ -33,6 +33,9 @@ var opts = struct {
 	// If collectSingleLevelLockStack is set to true, stack traces for single
 	// level locks are collected. Otherwise not.
 	collectSingleLevelLockStack bool
+	// If checkDoubleLocking is set to true, the detector checks for double
+	// locking
+	checkDoubleLocking bool
 	// maximum number of dependencies
 	maxDependencies int
 	// The maximum depth of a nested lock tree
@@ -47,6 +50,7 @@ var opts = struct {
 	periodicDetectionTime:       time.Second * 2,
 	collectCallStack:            false,
 	collectSingleLevelLockStack: false,
+	checkDoubleLocking:          false,
 	maxDependencies:             4096,
 	maxHoldingDepth:             128,
 	maxRoutines:                 1024,
@@ -112,6 +116,18 @@ func SetCollectSingleLevelLockInformation(enable bool) bool {
 		return false
 	}
 	opts.collectSingleLevelLockStack = enable
+	return true
+}
+
+// Enable or disable checks for double locking
+// Return true if detection was successful
+// Return false if setting was unsuccessful
+// It is not possible to set options after the detector was initialized
+func SetDoubleLockingDetection(enable bool) bool {
+	if initialized {
+		return false
+	}
+	opts.checkDoubleLocking = enable
 	return true
 }
 

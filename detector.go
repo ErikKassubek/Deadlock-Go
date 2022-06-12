@@ -375,3 +375,22 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 	fmt.Print("\n\n")
 
 }
+
+// check for double locking
+func (r *routine) checkDoubleLocking(m *mutex) {
+	for _, l := range r.holdingSet {
+		if l == m {
+			reportDeadlockDoubleLocking(m)
+			FindPotentialDeadlocks()
+			os.Exit(2)
+		}
+	}
+}
+
+// report if double locking is detected
+func reportDeadlockDoubleLocking(m *mutex) {
+	fmt.Printf(red, "DEADLOCK (DOUBLE LOCKING)\n\n")
+	fmt.Printf(yellow, "Initialization of lock involved in deadlock:\n\n")
+	fmt.Println(m.context[0].file, m.context[0].line)
+	fmt.Print("\n\n")
+}

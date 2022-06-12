@@ -56,10 +56,17 @@ func (m *mutex) Lock() {
 
 	r := &routines[index]
 
+	if opts.checkDoubleLocking {
+		r.checkDoubleLocking(m)
+	}
+
+	numRoutine := runtime.NumGoroutine()
 	// update data structures if more than on routine is running
-	if runtime.NumGoroutine() > 1 {
+	if numRoutine > 1 || opts.checkDoubleLocking {
 		(*r).updateLock(m)
 	}
+
+	// check for double locking
 }
 
 // Trylock mutex m
@@ -86,6 +93,10 @@ func (m *mutex) TryLock() bool {
 		if res {
 			(*r).updateTryLock(m)
 		}
+	}
+
+	if res && opts.checkDoubleLocking {
+		r.checkDoubleLocking(m)
 	}
 	return res
 }
