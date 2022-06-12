@@ -32,7 +32,7 @@ var routinesIndex = 0
 type routine struct {
 	index                     int        // index of the routine
 	holdingCount              int        // number of currently hold locks
-	holdingSet                [](*mutex) // set of currently hold locks
+	holdingSet                [](*Mutex) // set of currently hold locks
 	dependencyMap             map[uintptr]*[]*dependency
 	dependencies              [](*dependency)  // pre-allocated dependencies
 	curDep                    *dependency      // current dependency
@@ -49,7 +49,7 @@ func NewRoutine() {
 	r := routine{
 		index:                     routinesIndex,
 		holdingCount:              0,
-		holdingSet:                make([]*mutex, opts.maxHoldingDepth),
+		holdingSet:                make([]*Mutex, opts.maxHoldingDepth),
 		dependencyMap:             make(map[uintptr]*[]*dependency),
 		dependencies:              make([]*dependency, opts.maxDependencies),
 		curDep:                    nil,
@@ -71,7 +71,7 @@ func NewRoutine() {
 }
 
 // update the routine structure if a mutex is locked
-func (r *routine) updateLock(m *mutex) {
+func (r *routine) updateLock(m *Mutex) {
 	currentHolding := r.holdingSet
 	hc := r.holdingCount
 
@@ -164,7 +164,7 @@ func (r *routine) updateLock(m *mutex) {
 }
 
 // return true, if mutex with same holding count is in the dependency list
-func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency)) bool {
+func (r *routine) hasEntryDhl(m *Mutex, dhl *([]*dependency)) bool {
 	for _, d := range *dhl {
 		hc := r.holdingCount
 		if d.lock == m && d.holdingCount == hc {
@@ -182,7 +182,7 @@ func (r *routine) hasEntryDhl(m *mutex, dhl *([]*dependency)) bool {
 
 // update if tryLock is successfully
 // this only updates the holding set
-func (r *routine) updateTryLock(m *mutex) {
+func (r *routine) updateTryLock(m *Mutex) {
 	hc := r.holdingCount
 	if hc >= opts.maxHoldingDepth {
 		panic(`Holding Count is grater than maximum holding depth. Increase 
@@ -193,7 +193,7 @@ func (r *routine) updateTryLock(m *mutex) {
 }
 
 // update the routine structure is a mutex is released
-func (r *routine) updateUnlock(m *mutex) {
+func (r *routine) updateUnlock(m *Mutex) {
 	for i := r.holdingCount - 1; i >= 0; i-- {
 		if r.holdingSet[i] == m {
 			r.holdingSet = append(r.holdingSet[:i], r.holdingSet[i+1:]...)

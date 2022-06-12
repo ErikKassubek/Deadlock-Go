@@ -57,7 +57,7 @@ func FindPotentialDeadlocks() {
 }
 
 // run periodical deadlock detection check
-func periodicalDetection(stack *depStack, lastHolding *[](*mutex)) {
+func periodicalDetection(stack *depStack, lastHolding *[](*Mutex)) {
 	// only check if at least two routines are running
 	if runtime.NumGoroutine() < 2 {
 		return
@@ -91,7 +91,7 @@ func periodicalDetection(stack *depStack, lastHolding *[](*mutex)) {
 }
 
 // analyses the current state for deadlocks
-func detectionPeriodical(lastHolding [](*mutex), stack *depStack) {
+func detectionPeriodical(lastHolding [](*Mutex), stack *depStack) {
 	isTraversed := make([]bool, opts.maxRoutines)
 
 	for index, r := range routines {
@@ -109,7 +109,7 @@ func detectionPeriodical(lastHolding [](*mutex), stack *depStack) {
 
 // depth first search on current locks
 func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
-	lastHolding []*mutex) {
+	lastHolding []*Mutex) {
 	for i := visiting + 1; i < routinesIndex; i++ {
 		r := routines[i]
 		if r.curDep == nil || r.index < 0 {
@@ -377,7 +377,7 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 }
 
 // check for double locking
-func (r *routine) checkDoubleLocking(m *mutex) {
+func (r *routine) checkDoubleLocking(m *Mutex) {
 	for _, l := range r.holdingSet {
 		if l == m {
 			reportDeadlockDoubleLocking(m)
@@ -388,7 +388,7 @@ func (r *routine) checkDoubleLocking(m *mutex) {
 }
 
 // report if double locking is detected
-func reportDeadlockDoubleLocking(m *mutex) {
+func reportDeadlockDoubleLocking(m *Mutex) {
 	fmt.Printf(red, "DEADLOCK (DOUBLE LOCKING)\n\n")
 	fmt.Printf(yellow, "Initialization of lock involved in deadlock:\n\n")
 	fmt.Println(m.context[0].file, m.context[0].line)

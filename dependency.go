@@ -18,18 +18,18 @@ acquired.
 
 // struct to implement a dependency
 type dependency struct {
-	lock         *mutex     // lock
+	lock         *Mutex     // lock
 	holdingCount int        // on how many locks does mu depend
-	holdingSet   [](*mutex) // lock which where hold while mu was acquired
+	holdingSet   [](*Mutex) // lock which where hold while mu was acquired
 }
 
 // create a new dependency object
-func newDependency(lock *mutex, numberOfLocks int,
-	currentLocks [](*mutex)) dependency {
+func newDependency(lock *Mutex, numberOfLocks int,
+	currentLocks [](*Mutex)) dependency {
 	d := dependency{
 		lock:         lock,
 		holdingCount: numberOfLocks,
-		holdingSet:   make([]*mutex, opts.maxHoldingDepth),
+		holdingSet:   make([]*Mutex, opts.maxHoldingDepth),
 	}
 
 	for i := 0; i < numberOfLocks; i++ {
@@ -40,7 +40,7 @@ func newDependency(lock *mutex, numberOfLocks int,
 }
 
 // update dependencies
-func (d *dependency) update(lock *mutex, hs *[]*mutex, len int) {
+func (d *dependency) update(lock *Mutex, hs *[]*Mutex, len int) {
 	d.lock = lock
 	d.holdingCount = len
 	for i := 0; i < len; i++ {
