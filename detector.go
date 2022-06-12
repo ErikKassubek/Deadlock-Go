@@ -134,7 +134,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 					}
 				}
 				if !sthNew { // nothing changed in cycled threads, deadlock
-					reportDeadlockPeriodical(stack)
+					// reportDeadlockPeriodical(stack)
 					FindPotentialDeadlocks()
 					os.Exit(2)
 				}
