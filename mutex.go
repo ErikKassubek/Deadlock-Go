@@ -24,6 +24,7 @@ import (
 type Mutex struct {
 	mu      sync.Mutex
 	context []callerInfo // info about the creation and lock/unlock of this lock
+	in      bool         // ste to true after lock was initialized
 }
 
 // create Lock
@@ -36,11 +37,16 @@ func NewLock() (m Mutex) {
 		bufString = string(buf[:n])
 	}
 	m.context = append(m.context, newInfo(file, line, true, bufString))
+	m.in = true
 	return m
 }
 
 // Lock mutex m
 func (m *Mutex) Lock() {
+	if !m.in {
+		errorMessage := fmt.Sprint("Lock ", &m, " was not initialized.")
+		panic(errorMessage)
+	}
 	defer m.mu.Lock()
 
 	// if detection is disabled
@@ -71,6 +77,10 @@ func (m *Mutex) Lock() {
 
 // Trylock mutex m
 func (m *Mutex) TryLock() bool {
+	if !m.in {
+		errorMessage := fmt.Sprint("Lock ", &m, " was not initialized.")
+		panic(errorMessage)
+	}
 	res := m.mu.TryLock()
 
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
@@ -103,6 +113,10 @@ func (m *Mutex) TryLock() bool {
 
 // Unlock mutex m
 func (m *Mutex) Unlock() {
+	if !m.in {
+		errorMessage := fmt.Sprint("Lock ", &m, " was not initialized.")
+		panic(errorMessage)
+	}
 	defer m.mu.Unlock()
 
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
