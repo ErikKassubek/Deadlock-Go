@@ -187,7 +187,7 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 // output deadlocks detected from current status
 // current chain will be the whole cycle
 func reportDeadlockPeriodical(stack *depStack) {
-	fmt.Printf(red, "PROGRAM RAN INTO DEADLOCK DEADLOCK\n\n")
+	fmt.Printf(red, "PROGRAM RAN INTO DEADLOCK\n\n")
 	// fmt.Printf(yellow, "Initialization of locks involved in deadlock\n\n")
 	// for ds := stack.list.next; ds != nil; ds = ds.next {
 	// 	cont := ds.depEntry.lock.context[0]
