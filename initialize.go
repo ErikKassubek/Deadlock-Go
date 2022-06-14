@@ -22,7 +22,7 @@ import (
 var initialized = false
 
 // initialize deadlock detector
-func Initialize() {
+func initialize() {
 	initialized = true
 	// if periodical detection is disabled
 	if !opts.periodicDetection {

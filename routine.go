@@ -41,10 +41,16 @@ type routine struct {
 }
 
 // Initialize the go routine
-func NewRoutine() {
+func newRoutine() {
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
 		return
 	}
+
+	// initialize detector if necessary
+	if !initialized {
+		initialize()
+	}
+
 	createRoutineLock.Lock()
 	r := routine{
 		index:                     routinesIndex,
@@ -204,11 +210,14 @@ func (r *routine) updateUnlock(m *Mutex) {
 	}
 }
 
-// get the index of the routine
+// get the index of the routine, -1 if routine does not exist
 func getRoutineIndex() int {
 	id := goid.Get()
 	createRoutineLock.Lock()
-	index := mapIndex[id]
+	index, ok := mapIndex[id]
 	createRoutineLock.Unlock()
+	if !ok {
+		return -1
+	}
 	return index
 }

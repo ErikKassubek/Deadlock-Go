@@ -93,7 +93,6 @@ func periodicalDetection(stack *depStack, lastHolding *[](*Mutex)) {
 // analyses the current state for deadlocks
 func detectionPeriodical(lastHolding [](*Mutex), stack *depStack) {
 	isTraversed := make([]bool, opts.maxRoutines)
-
 	for index, r := range routines {
 		if r.curDep == nil || r.index < 0 {
 			continue
