@@ -133,7 +133,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 					}
 				}
 				if !sthNew { // nothing changed in cycled threads, deadlock
-					// reportDeadlockPeriodical(stack)
+					reportDeadlockPeriodical(stack)
 					FindPotentialDeadlocks()
 					os.Exit(2)
 				}
@@ -187,36 +187,36 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 // output deadlocks detected from current status
 // current chain will be the whole cycle
 func reportDeadlockPeriodical(stack *depStack) {
-	fmt.Printf(red, "DEADLOCK\n\n")
-	fmt.Printf(yellow, "Initialization of locks involved in deadlock\n\n")
-	for ds := stack.list.next; ds != nil; ds = ds.next {
-		cont := ds.depEntry.lock.context[0]
-		fmt.Println(cont.file, cont.line)
-	}
-	fmt.Printf(yellow, "\n\nCalls of locks involved in deadlock\n")
-	for ds := stack.list.next; ds != nil; ds = ds.next {
-		for i, caller := range ds.depEntry.lock.context {
-			if i == 0 {
-				if opts.collectCallStack {
-					fmt.Printf(blue, "\nCallStacks for lock created at: ")
-				} else {
-					fmt.Printf(blue, "\nCalls for lock created at: ")
-				}
-				fmt.Printf(blue, caller.file)
-				fmt.Printf(blue, ":")
-				fmt.Printf(blue, fmt.Sprint(caller.line))
-				fmt.Print("\n")
-			} else {
-				if opts.collectCallStack {
-					fmt.Println(caller.callStacks)
-				} else {
-					fmt.Println(caller.file, ":", caller.line)
-				}
-			}
-		}
-		fmt.Println("")
-	}
-	fmt.Println("")
+	fmt.Printf(red, "PROGRAM RAN INTO DEADLOCK DEADLOCK\n\n")
+	// fmt.Printf(yellow, "Initialization of locks involved in deadlock\n\n")
+	// for ds := stack.list.next; ds != nil; ds = ds.next {
+	// 	cont := ds.depEntry.lock.context[0]
+	// 	fmt.Println(cont.file, cont.line)
+	// }
+	// fmt.Printf(yellow, "\n\nCalls of locks involved in deadlock\n")
+	// for ds := stack.list.next; ds != nil; ds = ds.next {
+	// 	for i, caller := range ds.depEntry.lock.context {
+	// 		if i == 0 {
+	// 			if opts.collectCallStack {
+	// 				fmt.Printf(blue, "\nCallStacks for lock created at: ")
+	// 			} else {
+	// 				fmt.Printf(blue, "\nCalls for lock created at: ")
+	// 			}
+	// 			fmt.Printf(blue, caller.file)
+	// 			fmt.Printf(blue, ":")
+	// 			fmt.Printf(blue, fmt.Sprint(caller.line))
+	// 			fmt.Print("\n")
+	// 		} else {
+	// 			if opts.collectCallStack {
+	// 				fmt.Println(caller.callStacks)
+	// 			} else {
+	// 				fmt.Println(caller.file, ":", caller.line)
+	// 			}
+	// 		}
+	// 	}
+	// 	fmt.Println("")
+	// }
+	// fmt.Println("")
 }
 
 // get the amount of unique dependencies
