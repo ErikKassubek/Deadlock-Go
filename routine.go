@@ -46,11 +46,6 @@ func newRoutine() {
 		return
 	}
 
-	// initialize detector if necessary
-	if !initialized {
-		initialize()
-	}
-
 	createRoutineLock.Lock()
 	r := routine{
 		index:                     routinesIndex,

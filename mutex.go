@@ -56,6 +56,11 @@ func (m *Mutex) Lock() {
 		panic(errorMessage)
 	}
 
+	// initialize detector if necessary
+	if !initialized {
+		initialize()
+	}
+
 	defer func() {
 		m.mu.Lock()
 		m.isLocked = true
@@ -93,6 +98,11 @@ func (m *Mutex) TryLock() bool {
 		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
 			"x := NewLock()")
 		panic(errorMessage)
+	}
+
+	// initialize detector if necessary
+	if !initialized {
+		initialize()
 	}
 
 	res := m.mu.TryLock()
