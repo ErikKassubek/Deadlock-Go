@@ -391,5 +391,13 @@ func reportDeadlockDoubleLocking(m *Mutex) {
 	fmt.Printf(red, "DEADLOCK (DOUBLE LOCKING)\n\n")
 	fmt.Printf(yellow, "Initialization of lock involved in deadlock:\n\n")
 	fmt.Println(m.context[0].file, m.context[0].line)
+	fmt.Println("")
+	fmt.Printf(yellow, "Calls of lock involved in deadlock:\n\n")
+	for i, call := range m.context {
+		if i == 0 {
+			continue
+		}
+		fmt.Println(call.file, call.line)
+	}
 	fmt.Print("\n\n")
 }
