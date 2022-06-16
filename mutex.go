@@ -22,7 +22,6 @@ Author: Erik Kassubek <erik-kassubek@t-online.de>
 Package: deadlock
 Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
 	Institute of Computer Science: Dynamic Deadlock Detection in Go
-Date: 2022-06-05
 */
 
 /*
