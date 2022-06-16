@@ -399,5 +399,7 @@ func reportDeadlockDoubleLocking(m *Mutex) {
 		}
 		fmt.Println(call.file, call.line)
 	}
+	_, file, line, _ := runtime.Caller(3)
+	fmt.Println(file, line)
 	fmt.Print("\n\n")
 }

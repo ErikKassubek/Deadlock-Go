@@ -149,9 +149,9 @@ func (r *routine) updateLock(m *Mutex) {
 			buf := make([]byte, opts.maxCallStackSize)
 			n := runtime.Stack(buf[:], false)
 			bufString = string(buf[:n])
-		} else {
-			_, file, line, _ = runtime.Caller(2)
 		}
+
+		_, file, line, _ = runtime.Caller(2)
 
 		m.context = append(m.context, newInfo(file, line, false, bufString))
 	}
