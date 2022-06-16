@@ -23,11 +23,11 @@ func main() {
 	y := deadlock.NewLock()
 	
 	// make sure, that program does not terminates
-	// before the routines have terminated
+	// before all routines have terminated
 	ch := make(chan bool, 2)
 
 	go func() {
-    	x.Lock()
+		x.Lock()
 		y.Lock()
 		y.Unlock()
 		x.Unlock
