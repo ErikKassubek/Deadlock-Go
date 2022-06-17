@@ -1,6 +1,6 @@
-# Online Deadlock Detection in Go
+# Deadlock-Go: Dynamic Deadlock Detection in Go
 
-## What?
+## What
 
 Deadlock-Go implement Mutex drop-in replacements for 
 sync.Mutex with Lock, TryLock and Unlock functionality to detect potential 
@@ -72,7 +72,7 @@ Calls for lock created at: /home/***/selfWritten/deadlockGo.go:61
 /home/***/selfWritten/deadlockGo.go 76
 ```
 
-### Doubble Locking
+### Double Locking
 ```
 DEADLOCK (DOUBLE LOCKING)
 
@@ -88,20 +88,20 @@ Calls of lock involved in deadlock:
 
 
 ## Options
-The behaviour of Deadlock-Go can be influenced by differen options.
+The behavior of Deadlock-Go can be influenced by different options.
 They have to be set before the first lock was initialized.
 
-```SetPeriodicDetection(enabel bool)```: enable or disabel periodical detection, default: enabled
+```SetPeriodicDetection(enable bool)```: enable or disable periodical detection, default: enabled
 
-```SetComprehensiveDetection(enable bool)```: enable or disable compreensive detection, default: enabled
+```SetComprehensiveDetection(enable bool)```: enable or disable comprehensive detection, default: enabled
 
-```SetPeriodicDetectionTime(seconds int)```: set in which time intervalls 
+```SetPeriodicDetectionTime(seconds int)```: set in which time intervals 
 the periodical detection is started, default: 2s
 
-```SetCollectCallStacks(enable bool)```: if enabled, callstacks for lock 
-creation and aquesitions are collected. Otherwise onlt file and line 
+```SetCollectCallStacks(enable bool)```: if enabled, call-stacks for lock 
+creation and acquisitions are collected. Otherwise only file and line 
 information is collected, default: disabled
 
-```SetCollectSingleLevelLockInformation```: if enabled, information about single-level locks are collected, deafault enabled
+```SetCollectSingleLevelLockInformation```: if enabled, information about single-level locks are collected, default enabled
 
-```SetDoubleLockingDetection(enable bool)```: if enabled, detection of double locking is activ, default: enabled
+```SetDoubleLockingDetection(enable bool)```: if enabled, detection of double locking is active, default: enabled
