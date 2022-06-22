@@ -33,6 +33,7 @@ to update these trees.
 
 import (
 	"runtime"
+	"strings"
 	"sync"
 	"unsafe"
 
@@ -158,18 +159,24 @@ func (r *routine) updateLock(m *Mutex) {
 	}
 
 	if isNew && (hc > 0 || opts.collectSingleLevelLockStack) {
-		var bufString string
 		var file string
 		var line int
+		var bufStringCleaned string
 		if opts.collectCallStack {
+			var bufString string
 			buf := make([]byte, opts.maxCallStackSize)
 			n := runtime.Stack(buf[:], false)
 			bufString = string(buf[:n])
+			bufStringSplit := strings.Split(bufString, "\n")
+			bufStringCleaned = bufStringSplit[0] + "\n"
+			for i := 5; i < len(bufStringSplit); i++ {
+				bufStringCleaned += bufStringSplit[i] + "\n"
+			}
 		}
 
 		_, file, line, _ = runtime.Caller(2)
 
-		m.context = append(m.context, newInfo(file, line, false, bufString))
+		m.context = append(m.context, newInfo(file, line, false, bufStringCleaned))
 	}
 
 	if hc >= opts.maxHoldingDepth {

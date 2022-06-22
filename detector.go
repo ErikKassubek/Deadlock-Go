@@ -344,7 +344,6 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 					fmt.Println(c.callStacks)
 				}
 			}
-			fmt.Print("\n\n")
 		}
 		cont := dep.lock.context
 		fmt.Printf(blue, "CallStacks for lock created at: ")

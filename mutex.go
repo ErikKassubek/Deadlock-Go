@@ -53,13 +53,7 @@ func NewLock() (m Mutex) {
 	}
 
 	_, file, line, _ := runtime.Caller(1)
-	var bufString string
-	if opts.collectCallStack {
-		buf := make([]byte, opts.maxCallStackSize)
-		n := runtime.Stack(buf[:], false)
-		bufString = string(buf[:n])
-	}
-	m.context = append(m.context, newInfo(file, line, true, bufString))
+	m.context = append(m.context, newInfo(file, line, true, ""))
 	m.in = true
 	m.isLockedRoutineIndex = -1
 
