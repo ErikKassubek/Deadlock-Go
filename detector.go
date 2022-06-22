@@ -392,13 +392,11 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 }
 
 // check for double locking
-func (r *routine) checkDoubleLocking(m *Mutex) {
-	for _, l := range r.holdingSet {
-		if l == m {
-			reportDeadlockDoubleLocking(m)
-			FindPotentialDeadlocks()
-			os.Exit(2)
-		}
+func (r *routine) checkDoubleLocking(m *Mutex, index int) {
+	if m.isLocked && m.isLockedRoutineIndex == index {
+		reportDeadlockDoubleLocking(m)
+		FindPotentialDeadlocks()
+		os.Exit(2)
 	}
 }
 

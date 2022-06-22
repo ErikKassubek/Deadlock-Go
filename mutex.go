@@ -38,10 +38,11 @@ import (
 
 // type to implement a lock
 type Mutex struct {
-	mu       sync.Mutex
-	context  []callerInfo // info about the creation and lock/unlock of this lock
-	in       bool         // set to true after lock was initialized
-	isLocked bool         // set to true if lock is locked
+	mu                   sync.Mutex
+	context              []callerInfo // info about the creation and lock/unlock of this lock
+	in                   bool         // set to true after lock was initialized
+	isLocked             bool         // set to true if lock is locked
+	isLockedRoutineIndex int          // index of the routine, which holds the lock
 }
 
 // create Lock
@@ -60,6 +61,7 @@ func NewLock() (m Mutex) {
 	}
 	m.context = append(m.context, newInfo(file, line, true, bufString))
 	m.in = true
+	m.isLockedRoutineIndex = -1
 
 	return m
 }
@@ -98,8 +100,10 @@ func (m *Mutex) Lock() {
 
 	// check for double locking
 	if opts.checkDoubleLocking && m.isLocked {
-		r.checkDoubleLocking(m)
+		r.checkDoubleLocking(m, index)
 	}
+
+	m.isLockedRoutineIndex = index
 
 	numRoutine := runtime.NumGoroutine()
 	// update data structures if more than on routine is running
@@ -140,8 +144,10 @@ func (m *Mutex) TryLock() bool {
 
 	r := &routines[index]
 	if res && opts.checkDoubleLocking {
-		r.checkDoubleLocking(m)
+		r.checkDoubleLocking(m, index)
 	}
+
+	m.isLockedRoutineIndex = index
 
 	// update data structures if more than on routine is running
 	if runtime.NumGoroutine() > 1 {
@@ -162,6 +168,7 @@ func (m *Mutex) Unlock() {
 	}
 	defer func() {
 		m.mu.Unlock()
+		m.isLockedRoutineIndex = -1
 		m.isLocked = false
 	}()
 
