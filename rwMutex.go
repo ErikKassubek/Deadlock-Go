@@ -25,9 +25,10 @@ Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
 */
 
 /*
-mutex.go
-This file implements the drop-in-replacement for the locks (mutexes) as well as
-the lock and unlock operations for these locks.
+rwMutex.go
+This file implements the drop-in-replacement for the rw-locks (rw-mutexes) as
+well as
+the lock, rlock and unlock operations for these locks.
 */
 
 import (
@@ -38,8 +39,8 @@ import (
 )
 
 // type to implement a lock
-type Mutex struct {
-	mu                   sync.Mutex
+type RWMutex struct {
+	mu                   sync.RWMutex
 	context              []callerInfo // info about the creation and lock/unlock of this lock
 	in                   bool         // set to true after lock was initialized
 	isLocked             bool         // set to true if lock is locked
@@ -48,13 +49,13 @@ type Mutex struct {
 }
 
 // create Lock
-func NewLock() *Mutex {
+func NewRWLock() *RWMutex {
 	// initialize detector if necessary
 	if !initialized {
 		initialize()
 	}
 
-	m := Mutex{
+	m := RWMutex{
 		in:                   true,
 		isLockedRoutineIndex: -1,
 	}
@@ -68,29 +69,29 @@ func NewLock() *Mutex {
 // ====== GETTER ===============================================================
 
 // getter for isLocked
-func (m *Mutex) getIsLocked() *bool {
+func (m *RWMutex) getIsLocked() *bool {
 	return &m.isLocked
 }
 
 // getter for isLockedRoutineIndex
-func (m *Mutex) getIsLockedRoutineIndex() *int {
+func (m *RWMutex) getIsLockedRoutineIndex() *int {
 	return &m.isLockedRoutineIndex
 }
 
 // getter for context
-func (m *Mutex) getContext() *[]callerInfo {
+func (m *RWMutex) getContext() *[]callerInfo {
 	return &m.context
 }
 
 // getter for memoryPosition
-func (m *Mutex) getMemoryPosition() uintptr {
+func (m *RWMutex) getMemoryPosition() uintptr {
 	return m.memoryPosition
 }
 
 // ====== FUNCTIONS ============================================================
 
 // Lock mutex m
-func (m *Mutex) Lock() {
+func (m *RWMutex) Lock() {
 	if !m.in {
 		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
 			"x := NewLock()")
@@ -136,54 +137,10 @@ func (m *Mutex) Lock() {
 
 }
 
-// Trylock mutex m
-func (m *Mutex) TryLock() bool {
-	if !m.in {
-		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
-			"x := NewLock()")
-		panic(errorMessage)
-	}
-
-	// initialize detector if necessary
-	if !initialized {
-		initialize()
-	}
-
-	res := m.mu.TryLock()
-
-	if res {
-		m.isLocked = true
-	}
-
-	if !opts.periodicDetection && !opts.comprehensiveDetection {
-		return res
-	}
-
-	index := getRoutineIndex()
-	if index == -1 {
-		// create new routine, if not initialized
-		newRoutine()
-	}
-
-	r := &routines[index]
-	if res && opts.checkDoubleLocking {
-		r.checkDoubleLocking(m, index)
-	}
-
-	m.isLockedRoutineIndex = index
-
-	// update data structures if more than on routine is running
-	if runtime.NumGoroutine() > 1 {
-		if res {
-			(*r).updateTryLock(m)
-		}
-	}
-
-	return res
-}
+// TODO: implement trylock for rwmutex
 
 // Unlock mutex m
-func (m *Mutex) Unlock() {
+func (m *RWMutex) Unlock() {
 	if !m.isLocked {
 		errorMessage := fmt.Sprint("Tried to unLock lock", &m,
 			" which was not locked.")

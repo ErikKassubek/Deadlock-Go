@@ -35,7 +35,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/petermattis/goid"
 )
@@ -49,7 +48,7 @@ var routinesIndex = 0
 type routine struct {
 	index                     int        // index of the routine
 	holdingCount              int        // number of currently hold locks
-	holdingSet                [](*Mutex) // set of currently hold locks
+	holdingSet                []mutexInt // set of currently hold locks
 	dependencyMap             map[uintptr]*[]*dependency
 	dependencies              [](*dependency)  // pre-allocated dependencies
 	curDep                    *dependency      // current dependency
@@ -67,7 +66,7 @@ func newRoutine() {
 	r := routine{
 		index:                     routinesIndex,
 		holdingCount:              0,
-		holdingSet:                make([]*Mutex, opts.maxHoldingDepth),
+		holdingSet:                make([]mutexInt, opts.maxHoldingDepth),
 		dependencyMap:             make(map[uintptr]*[]*dependency),
 		dependencies:              make([]*dependency, opts.maxDependencies),
 		curDep:                    nil,
@@ -89,7 +88,7 @@ func newRoutine() {
 }
 
 // update the routine structure if a mutex is locked
-func (r *routine) updateLock(m *Mutex) {
+func (r *routine) updateLock(m mutexInt, muptr uintptr) {
 	currentHolding := r.holdingSet
 	hc := r.holdingCount
 
@@ -98,8 +97,7 @@ func (r *routine) updateLock(m *Mutex) {
 	// if lock is not a single level lock
 	if hc > 0 {
 		// found nested lock
-		key := uintptr(unsafe.Pointer(m)) ^ uintptr(
-			unsafe.Pointer(currentHolding[r.holdingCount-1]))
+		key := m.getMemoryPosition() ^ currentHolding[r.holdingCount-1].getMemoryPosition()
 
 		depMap := r.dependencyMap
 		dhl := make([]*dependency, 0)
@@ -176,7 +174,8 @@ func (r *routine) updateLock(m *Mutex) {
 
 		_, file, line, _ = runtime.Caller(2)
 
-		m.context = append(m.context, newInfo(file, line, false, bufStringCleaned))
+		context := m.getContext()
+		*context = append(*context, newInfo(file, line, false, bufStringCleaned))
 	}
 
 	if hc >= opts.maxHoldingDepth {
@@ -188,7 +187,7 @@ func (r *routine) updateLock(m *Mutex) {
 }
 
 // return true, if mutex with same holding count is in the dependency list
-func (r *routine) hasEntryDhl(m *Mutex, dhl *([]*dependency)) bool {
+func (r *routine) hasEntryDhl(m mutexInt, dhl *([]*dependency)) bool {
 	for _, d := range *dhl {
 		hc := r.holdingCount
 		if d.lock == m && d.holdingCount == hc {
@@ -206,7 +205,7 @@ func (r *routine) hasEntryDhl(m *Mutex, dhl *([]*dependency)) bool {
 
 // update if tryLock is successfully
 // this only updates the holding set
-func (r *routine) updateTryLock(m *Mutex) {
+func (r *routine) updateTryLock(m mutexInt) {
 	hc := r.holdingCount
 	if hc >= opts.maxHoldingDepth {
 		panic(`Holding Count is grater than maximum holding depth. Increase 
@@ -217,7 +216,7 @@ func (r *routine) updateTryLock(m *Mutex) {
 }
 
 // update the routine structure is a mutex is released
-func (r *routine) updateUnlock(m *Mutex) {
+func (r *routine) updateUnlock(m mutexInt) {
 	for i := r.holdingCount - 1; i >= 0; i-- {
 		if r.holdingSet[i] == m {
 			r.holdingSet = append(r.holdingSet[:i], r.holdingSet[i+1:]...)

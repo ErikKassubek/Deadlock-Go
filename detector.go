@@ -40,7 +40,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"unsafe"
 )
 
 // colors for deadlock messages
@@ -73,7 +72,7 @@ func FindPotentialDeadlocks() {
 }
 
 // run periodical deadlock detection check
-func periodicalDetection(stack *depStack, lastHolding *[](*Mutex)) {
+func periodicalDetection(stack *depStack, lastHolding *[]mutexInt) {
 	// only check if at least two routines are running
 	if runtime.NumGoroutine() < 2 {
 		return
@@ -107,7 +106,7 @@ func periodicalDetection(stack *depStack, lastHolding *[](*Mutex)) {
 }
 
 // analyses the current state for deadlocks
-func detectionPeriodical(lastHolding [](*Mutex), stack *depStack) {
+func detectionPeriodical(lastHolding []mutexInt, stack *depStack) {
 	isTraversed := make([]bool, opts.maxRoutines)
 	for index, r := range routines {
 		if r.curDep == nil || r.index < 0 {
@@ -124,7 +123,7 @@ func detectionPeriodical(lastHolding [](*Mutex), stack *depStack) {
 
 // depth first search on current locks
 func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
-	lastHolding []*Mutex) {
+	lastHolding []mutexInt) {
 	for i := visiting + 1; i < routinesIndex; i++ {
 		r := routines[i]
 		if r.curDep == nil || r.index < 0 {
@@ -204,35 +203,6 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 // current chain will be the whole cycle
 func reportDeadlockPeriodical(stack *depStack) {
 	fmt.Printf(red, "PROGRAM RAN INTO DEADLOCK\n\n")
-	// fmt.Printf(yellow, "Initialization of locks involved in deadlock\n\n")
-	// for ds := stack.list.next; ds != nil; ds = ds.next {
-	// 	cont := ds.depEntry.lock.context[0]
-	// 	fmt.Println(cont.file, cont.line)
-	// }
-	// fmt.Printf(yellow, "\n\nCalls of locks involved in deadlock\n")
-	// for ds := stack.list.next; ds != nil; ds = ds.next {
-	// 	for i, caller := range ds.depEntry.lock.context {
-	// 		if i == 0 {
-	// 			if opts.collectCallStack {
-	// 				fmt.Printf(blue, "\nCallStacks for lock created at: ")
-	// 			} else {
-	// 				fmt.Printf(blue, "\nCalls for lock created at: ")
-	// 			}
-	// 			fmt.Printf(blue, caller.file)
-	// 			fmt.Printf(blue, ":")
-	// 			fmt.Printf(blue, fmt.Sprint(caller.line))
-	// 			fmt.Print("\n")
-	// 		} else {
-	// 			if opts.collectCallStack {
-	// 				fmt.Println(caller.callStacks)
-	// 			} else {
-	// 				fmt.Println(caller.file, ":", caller.line)
-	// 			}
-	// 		}
-	// 	}
-	// 	fmt.Println("")
-	// }
-	// fmt.Println("")
 }
 
 // get the amount of unique dependencies
@@ -259,9 +229,9 @@ func (d *detector) preCheck() int {
 
 // return a string to represent an dependency
 func getDependencyString(str *string, dep *dependency) {
-	*str = fmt.Sprint(uintptr(unsafe.Pointer(dep.lock)))
+	*str = fmt.Sprint(dep.lock.getMemoryPosition())
 	for i := 0; i < dep.holdingCount; i++ {
-		*str = fmt.Sprint(uintptr(unsafe.Pointer(dep.holdingSet[i])))
+		*str = fmt.Sprint(dep.holdingSet[i].getMemoryPosition())
 	}
 }
 
@@ -318,13 +288,13 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 	fmt.Printf(red, "POTENTIAL DEADLOCK\n\n")
 	fmt.Printf(yellow, "Initialization of locks involved in potential deadlock:\n\n")
 	for cl := stack.list.next; cl != nil; cl = cl.next {
-		for _, c := range cl.depEntry.lock.context {
+		for _, c := range *cl.depEntry.lock.getContext() {
 			if c.create {
 				fmt.Println(c.file, c.line)
 			}
 		}
 	}
-	for _, c := range dep.lock.context {
+	for _, c := range *dep.lock.getContext() {
 		if c.create {
 			fmt.Println(c.file, c.line)
 		}
@@ -333,7 +303,7 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 	if opts.collectCallStack {
 		fmt.Printf(yellow, "\nCallStacks of Locks involved in potential deadlock:\n\n")
 		for cl := stack.list.next; cl != nil; cl = cl.next {
-			cont := cl.depEntry.lock.context
+			cont := *cl.depEntry.lock.getContext()
 			fmt.Printf(blue, "CallStacks for lock created at: ")
 			fmt.Printf(blue, cont[0].file)
 			fmt.Printf(blue, ":")
@@ -345,7 +315,7 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 				}
 			}
 		}
-		cont := dep.lock.context
+		cont := *dep.lock.getContext()
 		fmt.Printf(blue, "CallStacks for lock created at: ")
 		fmt.Printf(blue, cont[0].file)
 		fmt.Printf(blue, ":")
@@ -360,7 +330,7 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 	} else {
 		fmt.Printf(yellow, "\nCalls of locks involved in potential deadlock:\n\n")
 		for cl := stack.list.next; cl != nil; cl = cl.next {
-			for i, c := range cl.depEntry.lock.context {
+			for i, c := range *cl.depEntry.lock.getContext() {
 				if i == 0 {
 					fmt.Printf(blue, "Calls for lock created at: ")
 					fmt.Printf(blue, c.file)
@@ -373,7 +343,7 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 			}
 			fmt.Println("")
 		}
-		for i, c := range dep.lock.context {
+		for i, c := range *dep.lock.getContext() {
 			if i == 0 {
 				fmt.Printf(blue, "Calls for lock created at: ")
 				fmt.Printf(blue, c.file)
@@ -391,8 +361,8 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 }
 
 // check for double locking
-func (r *routine) checkDoubleLocking(m *Mutex, index int) {
-	if m.isLocked && m.isLockedRoutineIndex == index {
+func (r *routine) checkDoubleLocking(m mutexInt, index int) {
+	if *(m.getIsLocked()) && *(m.getIsLockedRoutineIndex()) == index {
 		reportDeadlockDoubleLocking(m)
 		FindPotentialDeadlocks()
 		os.Exit(2)
@@ -400,13 +370,14 @@ func (r *routine) checkDoubleLocking(m *Mutex, index int) {
 }
 
 // report if double locking is detected
-func reportDeadlockDoubleLocking(m *Mutex) {
+func reportDeadlockDoubleLocking(m mutexInt) {
 	fmt.Printf(red, "DEADLOCK (DOUBLE LOCKING)\n\n")
 	fmt.Printf(yellow, "Initialization of lock involved in deadlock:\n\n")
-	fmt.Println(m.context[0].file, m.context[0].line)
+	context := *m.getContext()
+	fmt.Println(context[0].file, context[0].line)
 	fmt.Println("")
 	fmt.Printf(yellow, "Calls of lock involved in deadlock:\n\n")
-	for i, call := range m.context {
+	for i, call := range context {
 		if i == 0 {
 			continue
 		}

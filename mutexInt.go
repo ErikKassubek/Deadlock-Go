@@ -25,37 +25,13 @@ Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
 */
 
 /*
-initialize.go
-This code initializes the deadlock detector. Its main task is to start
-and periodically run the periodical deadlock detection.
+mutexInt.go
+This file implements and interface for Mutex and RWMutex
 */
 
-import (
-	"time"
-)
-
-// it is not possible to set options after initialization
-var initialized = false
-
-// initialize deadlock detector
-func initialize() {
-	initialized = true
-	// if periodical detection is disabled
-	if !opts.periodicDetection {
-		return
-	}
-
-	go func() {
-		timer := time.NewTicker(opts.periodicDetectionTime)
-		stack := newDepStack()
-		lastHolding := make([]mutexInt, opts.maxRoutines)
-
-		for {
-			select {
-			case <-timer.C:
-				periodicalDetection(&stack, &lastHolding)
-			}
-		}
-	}()
-
+type mutexInt interface {
+	getIsLocked() *bool
+	getIsLockedRoutineIndex() *int
+	getContext() *[]callerInfo
+	getMemoryPosition() uintptr
 }
