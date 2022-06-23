@@ -46,18 +46,20 @@ type Mutex struct {
 }
 
 // create Lock
-func NewLock() (m Mutex) {
+func NewLock() *Mutex {
 	// initialize detector if necessary
 	if !initialized {
 		initialize()
 	}
 
+	m := Mutex{
+		in:                   true,
+		isLockedRoutineIndex: -1,
+	}
 	_, file, line, _ := runtime.Caller(1)
 	m.context = append(m.context, newInfo(file, line, true, ""))
-	m.in = true
-	m.isLockedRoutineIndex = -1
 
-	return m
+	return &m
 }
 
 // Lock mutex m
