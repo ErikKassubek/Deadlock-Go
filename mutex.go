@@ -41,7 +41,7 @@ type Mutex struct {
 	mu                   sync.Mutex
 	context              []callerInfo // info about the creation and lock/unlock of this lock
 	in                   bool         // set to true after lock was initialized
-	isLocked             bool         // set to true if lock is locked
+	numberLocked         int          // 1 if locked, 0 otherwise
 	isLockedRoutineIndex int          // index of the routine, which holds the lock
 	memoryPosition       uintptr      // position of the mutex in memory
 }
@@ -67,8 +67,8 @@ func NewLock() *Mutex {
 // ====== GETTER ===============================================================
 
 // getter for isLocked
-func (m *Mutex) getIsLocked() *bool {
-	return &m.isLocked
+func (m *Mutex) getNumberLocked() *int {
+	return &m.numberLocked
 }
 
 // getter for isLockedRoutineIndex
@@ -103,7 +103,7 @@ func (m *Mutex) getIsRead() *bool {
 
 // check if lock is rwLock
 func (m *Mutex) isRWLock() bool {
-	return true
+	return false
 }
 
 // ====== FUNCTIONS ============================================================
@@ -113,10 +113,10 @@ func (m *Mutex) Lock() {
 	lockInt(m, false)
 }
 
-// Trylock mutex m
-func (m *Mutex) TryLock() bool {
-	return tryLockInt(m)
-}
+// // Trylock mutex m
+// func (m *Mutex) TryLock() bool {
+// 	return tryLockInt(m)
+// }
 
 // Unlock mutex m
 func (m *Mutex) Unlock() {

@@ -270,7 +270,9 @@ func (d *detector) dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 			dep := routine.dependencies[j]
 			if isChain(stack, dep) {
 				if isCycleChain(stack, dep) {
-					d.reportDeadlock(stack, dep)
+					stack.push(dep, j)
+					d.reportDeadlock(stack)
+					stack.pop()
 				} else {
 					(*isTraversed)[i] = true
 					stack.push(dep, i)
@@ -284,7 +286,7 @@ func (d *detector) dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 }
 
 //report a found deadlock
-func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
+func (d *detector) reportDeadlock(stack *depStack) {
 	fmt.Printf(red, "POTENTIAL DEADLOCK\n\n")
 	fmt.Printf(yellow, "Initialization of locks involved in potential deadlock:\n\n")
 	for cl := stack.list.next; cl != nil; cl = cl.next {
@@ -292,11 +294,6 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 			if c.create {
 				fmt.Println(c.file, c.line)
 			}
-		}
-	}
-	for _, c := range *dep.lock.getContext() {
-		if c.create {
-			fmt.Println(c.file, c.line)
 		}
 	}
 
@@ -315,18 +312,6 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 				}
 			}
 		}
-		cont := *dep.lock.getContext()
-		fmt.Printf(blue, "CallStacks for lock created at: ")
-		fmt.Printf(blue, cont[0].file)
-		fmt.Printf(blue, ":")
-		fmt.Printf(blue, fmt.Sprint(cont[0].line))
-		fmt.Print("\n")
-		for i, c := range cont {
-			if i == 0 {
-				continue
-			}
-			fmt.Println(c.callStacks)
-		}
 	} else {
 		fmt.Printf(yellow, "\nCalls of locks involved in potential deadlock:\n\n")
 		for cl := stack.list.next; cl != nil; cl = cl.next {
@@ -343,18 +328,6 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 			}
 			fmt.Println("")
 		}
-		for i, c := range *dep.lock.getContext() {
-			if i == 0 {
-				fmt.Printf(blue, "Calls for lock created at: ")
-				fmt.Printf(blue, c.file)
-				fmt.Printf(blue, ":")
-				fmt.Printf(blue, fmt.Sprint(c.line))
-				fmt.Printf("\n")
-			} else {
-				fmt.Println(c.file, c.line)
-			}
-		}
-
 	}
 	fmt.Print("\n\n")
 
@@ -362,11 +335,13 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 
 // check for double locking
 func (r *routine) checkDoubleLocking(m mutexInt, index int, rLock bool) {
-	if *(m.getIsLocked()) && *(m.getIsLockedRoutineIndex()) == index {
+	if *(m.getIsLockedRoutineIndex()) == index {
+
 		// no double locking if both are reader locks
 		if m.isRWLock() && *m.getIsRead() && rLock {
 			return
 		}
+
 		reportDeadlockDoubleLocking(m)
 		FindPotentialDeadlocks()
 		os.Exit(2)

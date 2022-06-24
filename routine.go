@@ -136,7 +136,7 @@ func (r *routine) updateLock(m mutexInt) {
 		// save information on single level locks if enabled in the options
 		// to avoid creating the caller info multiple times
 		if opts.collectSingleLevelLockStack {
-			_, file, line, _ := runtime.Caller(2)
+			_, file, line, _ := runtime.Caller(3)
 			if lines, ok := r.collectedSingleLevelLocks[file]; ok {
 				isNew = true
 				for _, l := range lines {
@@ -172,7 +172,7 @@ func (r *routine) updateLock(m mutexInt) {
 			}
 		}
 
-		_, file, line, _ = runtime.Caller(2)
+		_, file, line, _ = runtime.Caller(3)
 
 		context := m.getContext()
 		*context = append(*context, newInfo(file, line, false, bufStringCleaned))

@@ -42,7 +42,7 @@ type RWMutex struct {
 	mu                   sync.RWMutex
 	context              []callerInfo // info about the creation and lock/unlock of this lock
 	in                   bool         // set to true after lock was initialized
-	isLocked             bool         // set to true if lock is locked
+	numberLocked         int          // how ofter is the lock locked
 	isLockedRoutineIndex int          // index of the routine, which holds the lock
 	memoryPosition       uintptr      // position of the mutex in memory
 	isRead               bool         // set true, if last acquisition was RLock
@@ -69,8 +69,8 @@ func NewRWLock() *RWMutex {
 // ====== GETTER ===============================================================
 
 // getter for isLocked
-func (m *RWMutex) getIsLocked() *bool {
-	return &m.isLocked
+func (m *RWMutex) getNumberLocked() *int {
+	return &m.numberLocked
 }
 
 // getter for isLockedRoutineIndex
@@ -122,11 +122,11 @@ func (m *RWMutex) RLock() {
 	m.isRead = true
 }
 
-// TryLock rwmutex m
-func (m *RWMutex) TryLock() {
-	tryLockInt(m)
-	m.isRead = false
-}
+// // TryLock rwmutex m
+// func (m *RWMutex) TryLock() {
+// 	tryLockInt(m)
+// 	m.isRead = false
+// }
 
 // Unlock rwmutex m
 func (m *RWMutex) Unlock() {
