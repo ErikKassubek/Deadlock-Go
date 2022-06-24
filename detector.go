@@ -193,10 +193,36 @@ func isChain(stack *depStack, dep *dependency) bool {
 func isCycleChain(stack *depStack, dep *dependency) bool {
 	for i := 0; i < stack.list.next.depEntry.holdingCount; i++ {
 		if stack.list.next.depEntry.holdingSet[i] == dep.lock {
-			return true
+			stack.push(dep, -1)
+			res := checkRWCycle(stack)
+			stack.pop()
+			return res
 		}
 	}
 	return false
+}
+
+// check if the cycle does lead to a deadlock even if it contains rwlocks
+func checkRWCycle(stack *depStack) bool {
+	for c := stack.list.next; c != nil; c = c.next {
+		isRead := *c.depEntry.lock.getIsRead()
+		if !isRead {
+			continue
+		}
+		for i := 0; i < c.depEntry.holdingCount; i++ {
+			next := c.next
+			if next == nil {
+				next = stack.list.next
+			}
+			if next.depEntry.holdingSet[i] == c.depEntry.lock {
+				isReadHS := *c.depEntry.holdingSet[i].getIsRead()
+				if isReadHS {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 // output deadlocks detected from current status

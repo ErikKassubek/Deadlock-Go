@@ -98,7 +98,8 @@ func (m *Mutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
 
 // empty getter for isRead, is needed for mutexInt
 func (m *Mutex) getIsRead() *bool {
-	return nil
+	res := false
+	return &res
 }
 
 // check if lock is rwLock
