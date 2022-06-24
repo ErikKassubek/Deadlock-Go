@@ -32,7 +32,6 @@ the lock, rlock and unlock operations for these locks.
 */
 
 import (
-	"fmt"
 	"runtime"
 	"sync"
 	"unsafe"
@@ -46,6 +45,7 @@ type RWMutex struct {
 	isLocked             bool         // set to true if lock is locked
 	isLockedRoutineIndex int          // index of the routine, which holds the lock
 	memoryPosition       uintptr      // position of the mutex in memory
+	isRead               bool         // set true, if last acquisition was RLock
 }
 
 // create Lock
@@ -88,76 +88,47 @@ func (m *RWMutex) getMemoryPosition() uintptr {
 	return m.memoryPosition
 }
 
-// ====== FUNCTIONS ============================================================
-
-// Lock mutex m
-func (m *RWMutex) Lock() {
-	if !m.in {
-		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
-			"x := NewLock()")
-		panic(errorMessage)
-	}
-
-	// initialize detector if necessary
-	if !initialized {
-		initialize()
-	}
-
-	defer func() {
-		m.mu.Lock()
-		m.isLocked = true
-	}()
-
-	// if detection is disabled
-	if !opts.periodicDetection && !opts.comprehensiveDetection {
-		return
-	}
-
-	index := getRoutineIndex()
-	if index == -1 {
-		// create new routine, if not initialized
-		newRoutine()
-	}
-	index = getRoutineIndex()
-
-	r := &routines[index]
-
-	// check for double locking
-	if opts.checkDoubleLocking && m.isLocked {
-		r.checkDoubleLocking(m, index)
-	}
-
-	m.isLockedRoutineIndex = index
-
-	numRoutine := runtime.NumGoroutine()
-	// update data structures if more than on routine is running
-	if numRoutine > 1 {
-		(*r).updateLock(m, uintptr(unsafe.Pointer(m)))
-	}
-
+// getter for in
+func (m *RWMutex) getIn() *bool {
+	return &m.in
 }
 
-// TODO: implement trylock for rwmutex
+// getter for mu
+func (m *RWMutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
+	return false, nil, &m.mu
+}
 
-// Unlock mutex m
+// getter for isRead
+func (m *RWMutex) getIsRead() *bool {
+	return &m.isRead
+}
+
+// check if lock is rwLock
+func (m *RWMutex) isRWLock() bool {
+	return true
+}
+
+// ====== FUNCTIONS ============================================================
+
+// Lock rwmutex m
+func (m *RWMutex) Lock() {
+	lockInt(m, false)
+	m.isRead = false
+}
+
+// RLock rwmutex m
+func (m *RWMutex) RLock() {
+	lockInt(m, true)
+	m.isRead = true
+}
+
+// TryLock rwmutex m
+func (m *RWMutex) TryLock() {
+	tryLockInt(m)
+	m.isRead = false
+}
+
+// Unlock rwmutex m
 func (m *RWMutex) Unlock() {
-	if !m.isLocked {
-		errorMessage := fmt.Sprint("Tried to unLock lock", &m,
-			" which was not locked.")
-		panic(errorMessage)
-	}
-	defer func() {
-		m.mu.Unlock()
-		m.isLockedRoutineIndex = -1
-		m.isLocked = false
-	}()
-
-	if !opts.periodicDetection && !opts.comprehensiveDetection {
-		return
-	}
-
-	index := getRoutineIndex()
-
-	r := &routines[index]
-	(*r).updateUnlock(m)
+	unlockInt(m)
 }

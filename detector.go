@@ -361,8 +361,12 @@ func (d *detector) reportDeadlock(stack *depStack, dep *dependency) {
 }
 
 // check for double locking
-func (r *routine) checkDoubleLocking(m mutexInt, index int) {
+func (r *routine) checkDoubleLocking(m mutexInt, index int, rLock bool) {
 	if *(m.getIsLocked()) && *(m.getIsLockedRoutineIndex()) == index {
+		// no double locking if both are reader locks
+		if m.isRWLock() && *m.getIsRead() && rLock {
+			return
+		}
 		reportDeadlockDoubleLocking(m)
 		FindPotentialDeadlocks()
 		os.Exit(2)

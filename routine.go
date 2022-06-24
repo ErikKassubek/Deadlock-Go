@@ -88,7 +88,7 @@ func newRoutine() {
 }
 
 // update the routine structure if a mutex is locked
-func (r *routine) updateLock(m mutexInt, muptr uintptr) {
+func (r *routine) updateLock(m mutexInt) {
 	currentHolding := r.holdingSet
 	hc := r.holdingCount
 

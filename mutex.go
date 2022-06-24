@@ -31,7 +31,6 @@ the lock and unlock operations for these locks.
 */
 
 import (
-	"fmt"
 	"runtime"
 	"sync"
 	"unsafe"
@@ -87,120 +86,39 @@ func (m *Mutex) getMemoryPosition() uintptr {
 	return m.memoryPosition
 }
 
+// getter for in
+func (m *Mutex) getIn() *bool {
+	return &m.in
+}
+
+// getter for mu
+func (m *Mutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
+	return true, &m.mu, nil
+}
+
+// empty getter for isRead, is needed for mutexInt
+func (m *Mutex) getIsRead() *bool {
+	return nil
+}
+
+// check if lock is rwLock
+func (m *Mutex) isRWLock() bool {
+	return true
+}
+
 // ====== FUNCTIONS ============================================================
 
 // Lock mutex m
 func (m *Mutex) Lock() {
-	if !m.in {
-		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
-			"x := NewLock()")
-		panic(errorMessage)
-	}
-
-	// initialize detector if necessary
-	if !initialized {
-		initialize()
-	}
-
-	defer func() {
-		m.mu.Lock()
-		m.isLocked = true
-	}()
-
-	// if detection is disabled
-	if !opts.periodicDetection && !opts.comprehensiveDetection {
-		return
-	}
-
-	index := getRoutineIndex()
-	if index == -1 {
-		// create new routine, if not initialized
-		newRoutine()
-	}
-	index = getRoutineIndex()
-
-	r := &routines[index]
-
-	// check for double locking
-	if opts.checkDoubleLocking && m.isLocked {
-		r.checkDoubleLocking(m, index)
-	}
-
-	m.isLockedRoutineIndex = index
-
-	numRoutine := runtime.NumGoroutine()
-	// update data structures if more than on routine is running
-	if numRoutine > 1 {
-		(*r).updateLock(m, uintptr(unsafe.Pointer(m)))
-	}
-
+	lockInt(m, false)
 }
 
 // Trylock mutex m
 func (m *Mutex) TryLock() bool {
-	if !m.in {
-		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
-			"x := NewLock()")
-		panic(errorMessage)
-	}
-
-	// initialize detector if necessary
-	if !initialized {
-		initialize()
-	}
-
-	res := m.mu.TryLock()
-
-	if res {
-		m.isLocked = true
-	}
-
-	if !opts.periodicDetection && !opts.comprehensiveDetection {
-		return res
-	}
-
-	index := getRoutineIndex()
-	if index == -1 {
-		// create new routine, if not initialized
-		newRoutine()
-	}
-
-	r := &routines[index]
-	if res && opts.checkDoubleLocking {
-		r.checkDoubleLocking(m, index)
-	}
-
-	m.isLockedRoutineIndex = index
-
-	// update data structures if more than on routine is running
-	if runtime.NumGoroutine() > 1 {
-		if res {
-			(*r).updateTryLock(m)
-		}
-	}
-
-	return res
+	return tryLockInt(m)
 }
 
 // Unlock mutex m
 func (m *Mutex) Unlock() {
-	if !m.isLocked {
-		errorMessage := fmt.Sprint("Tried to unLock lock", &m,
-			" which was not locked.")
-		panic(errorMessage)
-	}
-	defer func() {
-		m.mu.Unlock()
-		m.isLockedRoutineIndex = -1
-		m.isLocked = false
-	}()
-
-	if !opts.periodicDetection && !opts.comprehensiveDetection {
-		return
-	}
-
-	index := getRoutineIndex()
-
-	r := &routines[index]
-	(*r).updateUnlock(m)
+	unlockInt(m)
 }
