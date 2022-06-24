@@ -104,56 +104,6 @@ func lockInt(m mutexInt, rLock bool) {
 	}
 }
 
-// TODO: make trylock working
-// // run trylock for the mutex or rwmutex and update the detector data
-// func tryLockInt(m mutexInt) bool {
-// 	if !*m.getIn() {
-// 		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
-// 			"x := NewLock()")
-// 		panic(errorMessage)
-// 	}
-
-// 	// initialize detector if necessary
-// 	if !initialized {
-// 		initialize()
-// 	}
-
-// 	d, l, t := m.getLock()
-// 	var res bool
-// 	if d {
-// 		res = l.TryLock()
-// 	} else {
-// 		res = t.TryLock()
-// 	}
-
-// 	if res {
-// 		*m.getNumberLocked() += 1
-// 	}
-
-// 	if !opts.periodicDetection && !opts.comprehensiveDetection {
-// 		return res
-// 	}
-
-// 	index := getRoutineIndex()
-// 	if index == -1 {
-// 		// create new routine, if not initialized
-// 		newRoutine()
-// 	}
-
-// 	r := &routines[index]
-
-// 	*m.getIsLockedRoutineIndex() = index
-
-// 	// update data structures if more than on routine is running
-// 	if runtime.NumGoroutine() > 1 {
-// 		if res {
-// 			(*r).updateTryLock(m)
-// 		}
-// 	}
-
-// 	return res
-// }
-
 // unlock the mutex or rwmutex and update the detector data
 func unlockInt(m mutexInt) {
 	if *m.getNumberLocked() == 0 {

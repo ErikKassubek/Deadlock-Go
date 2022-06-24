@@ -31,6 +31,7 @@ the lock and unlock operations for these locks.
 */
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
 	"unsafe"
@@ -114,10 +115,54 @@ func (m *Mutex) Lock() {
 	lockInt(m, false)
 }
 
-// // Trylock mutex m
-// func (m *Mutex) TryLock() bool {
-// 	return tryLockInt(m)
-// }
+// Trylock mutex m
+func (m *Mutex) TryLock() bool {
+	if !*m.getIn() {
+		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
+			"x := NewLock()")
+		panic(errorMessage)
+	}
+
+	// initialize detector if necessary
+	if !initialized {
+		initialize()
+	}
+
+	d, l, t := m.getLock()
+	var res bool
+	if d {
+		res = l.TryLock()
+	} else {
+		res = t.TryLock()
+	}
+
+	if res {
+		*m.getNumberLocked() += 1
+	}
+
+	if !opts.periodicDetection && !opts.comprehensiveDetection {
+		return res
+	}
+
+	index := getRoutineIndex()
+	if index == -1 {
+		// create new routine, if not initialized
+		newRoutine()
+	}
+
+	r := &routines[index]
+
+	*m.getIsLockedRoutineIndex() = index
+
+	// update data structures if more than on routine is running
+	if runtime.NumGoroutine() > 1 {
+		if res {
+			(*r).updateTryLock(m)
+		}
+	}
+
+	return res
+}
 
 // Unlock mutex m
 func (m *Mutex) Unlock() {
