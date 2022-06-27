@@ -86,6 +86,8 @@ Calls of lock involved in deadlock:
 /home/***/selfWritten/deadlockGo.go 210
 ```
 
+## RWLocks
+RWLocks are implemented but not yet fully supported for deadlock detection.
 
 ## Options
 The behavior of Deadlock-Go can be influenced by different options.
