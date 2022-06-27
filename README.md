@@ -2,9 +2,8 @@
 
 ## What
 
-Deadlock-Go implement Mutex drop-in replacements for 
-sync.Mutex with Lock, TryLock and Unlock functionality to detect potential 
-deadlocks.
+Deadlock-Go implements Mutex drop-in replacements for 
+sync.Mutex with Lock, TryLock and Unlock functionality and sync.RWLock with Lock and Unlock functionality to detect potential deadlocks.
 
 Only works from Go Version 1.18.
 
@@ -43,6 +42,39 @@ func main() {
 	}()
 	<- ch
 	<- ch
+}
+```
+
+```
+import "github.com/ErikKassubek/Deadlock-Go"
+
+func main() {
+	defer deadlock.FindPotentialDeadlocks()
+	x := NewRWLock()
+	y := NewRWLock()
+
+	ch := make(chan bool, 2)
+
+	go func() {
+		x.RLock()
+		y.Lock()
+		y.Unlock()
+		x.Unlock()
+
+		ch <- true
+	}()
+
+	go func() {
+		y.RLock()
+		x.Lock()
+		x.Unlock()
+		y.Unlock()
+
+		ch <- true
+	}()
+
+	<-ch
+	<-ch
 }
 ```
 
@@ -85,9 +117,6 @@ Calls of lock involved in deadlock:
 /home/***/selfWritten/deadlockGo.go 209
 /home/***/selfWritten/deadlockGo.go 210
 ```
-
-## RWLocks
-RWLocks are implemented but not yet fully supported for deadlock detection.
 
 ## Options
 The behavior of Deadlock-Go can be influenced by different options.

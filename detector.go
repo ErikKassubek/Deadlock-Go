@@ -164,7 +164,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 	}
 }
 
-// check if adding dep to chain will still be a chain
+// check if adding dep to chain will still be a valid chain
 func isChain(stack *depStack, dep *dependency) bool {
 	for cl := stack.list.next; cl != nil; cl = cl.next {
 		if cl.depEntry == dep {
@@ -175,8 +175,13 @@ func isChain(stack *depStack, dep *dependency) bool {
 		}
 		for i := 0; i < cl.depEntry.holdingCount; i++ {
 			for j := 0; j < dep.holdingCount; j++ {
-				if cl.depEntry.holdingSet[i] == dep.holdingSet[j] {
-					return false
+				clHs := cl.depEntry.holdingSet[i]
+				depHs := dep.holdingSet[j]
+				if clHs == depHs {
+					// RLocks do not function as guard locks
+					if !(*clHs.getIsRead() && *depHs.getIsRead()) {
+						return false
+					}
 				}
 			}
 		}
@@ -292,6 +297,7 @@ func (d *detector) dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 		if (*isTraversed)[i] {
 			continue
 		}
+
 		for j := 0; j < routine.depCount; j++ {
 			dep := routine.dependencies[j]
 			if isChain(stack, dep) {
@@ -356,7 +362,48 @@ func (d *detector) reportDeadlock(stack *depStack) {
 		}
 	}
 	fmt.Print("\n\n")
+}
 
+// check for potential deadlocks with rwlocks because they don't
+// work as guard locks, return true if deadlock was detected
+func (d *detector) checkRWLocksGuardLocks() bool {
+	for i := 0; i < routinesIndex; i++ {
+		for j := i + 1; j < routinesIndex; j++ {
+			r1 := routines[i]
+			r2 := routines[j]
+			end := false
+			for r1Index := 0; r1Index < r1.depCount; r1Index++ {
+				if end {
+					break
+				}
+				for r2Index := 0; r2Index < r2.depCount; r2Index++ {
+					r1LockHs := r1.dependencies[r1Index].holdingSet
+					r2LockHs := r2.dependencies[r2Index].holdingSet
+					for _, r1Lock := range r1LockHs {
+						for _, r2Lock := range r2LockHs {
+							if r1Lock != r2Lock {
+								continue
+							}
+
+							if r1Lock == nil {
+								end = true
+								break
+							}
+
+							if r2Lock == nil {
+								break
+							}
+
+							if *(r1Lock.getIsRead()) && *(r2Lock.getIsRead()) {
+								return true
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 // check for double locking
