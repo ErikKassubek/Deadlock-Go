@@ -42,10 +42,8 @@ type mutexInt interface {
 	getContext() *[]callerInfo
 	getMemoryPosition() uintptr
 	getIn() *bool
-	// if bool is true, mutex is returned,otherwise RWMutex is returned
 	getLock() (bool, *sync.Mutex, *sync.RWMutex)
 	getIsRead() *bool
-	isRWLock() bool
 }
 
 // lock the mutex or rwmutex and update the detector data

@@ -245,7 +245,7 @@ func (r *routine) checkDoubleLocking(m mutexInt, index int, rLock bool) {
 	if *(m.getIsLockedRoutineIndex()) == index {
 
 		// no double locking if both are reader locks
-		if m.isRWLock() && *m.getIsRead() && rLock {
+		if *m.getIsRead() && rLock {
 			return
 		}
 

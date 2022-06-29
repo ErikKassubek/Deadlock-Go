@@ -39,7 +39,7 @@ import (
 
 // type to implement a lock
 type RWMutex struct {
-	mu                   sync.RWMutex
+	mu                   *sync.RWMutex
 	context              []callerInfo // info about the creation and lock/unlock of this lock
 	in                   bool         // set to true after lock was initialized
 	numberLocked         int          // how ofter is the lock locked
@@ -56,6 +56,7 @@ func NewRWLock() *RWMutex {
 	}
 
 	m := RWMutex{
+		mu:                   &sync.RWMutex{},
 		in:                   true,
 		isLockedRoutineIndex: -1,
 	}
@@ -95,17 +96,12 @@ func (m *RWMutex) getIn() *bool {
 
 // getter for mu
 func (m *RWMutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
-	return false, nil, &m.mu
+	return false, nil, m.mu
 }
 
 // getter for isRead
 func (m *RWMutex) getIsRead() *bool {
 	return &m.isRead
-}
-
-// check if lock is rwLock
-func (m *RWMutex) isRWLock() bool {
-	return true
 }
 
 // ====== FUNCTIONS ============================================================

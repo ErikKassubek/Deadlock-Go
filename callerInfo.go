@@ -29,9 +29,8 @@ callerInfo.go
 Implementation of a struct to save the caller info of locks
 */
 
-/* Type to save info about caller.
-A caller is an instance where a lock was created or locked.
-*/
+// Type to save info about caller.
+// A caller is an instance where a lock was created or locked.
 type callerInfo struct {
 	// name of the file with full path
 	file string

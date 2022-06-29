@@ -37,9 +37,10 @@ import (
 	"unsafe"
 )
 
-// type to implement a lock
+// Type to implement a lock
+// It can be used as an drop in replacement
 type Mutex struct {
-	mu                   sync.Mutex
+	mu                   *sync.Mutex
 	context              []callerInfo // info about the creation and lock/unlock of this lock
 	in                   bool         // set to true after lock was initialized
 	numberLocked         int          // 1 if locked, 0 otherwise
@@ -55,6 +56,7 @@ func NewLock() *Mutex {
 	}
 
 	m := Mutex{
+		mu:                   &sync.Mutex{},
 		in:                   true,
 		isLockedRoutineIndex: -1,
 	}
@@ -65,7 +67,7 @@ func NewLock() *Mutex {
 	return &m
 }
 
-// ====== GETTER ===============================================================
+// ============ GETTER ============
 
 // getter for isLocked
 func (m *Mutex) getNumberLocked() *int {
@@ -94,7 +96,7 @@ func (m *Mutex) getIn() *bool {
 
 // getter for mu
 func (m *Mutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
-	return true, &m.mu, nil
+	return true, m.mu, nil
 }
 
 // empty getter for isRead, is needed for mutexInt
@@ -103,12 +105,7 @@ func (m *Mutex) getIsRead() *bool {
 	return &res
 }
 
-// check if lock is rwLock
-func (m *Mutex) isRWLock() bool {
-	return false
-}
-
-// ====== FUNCTIONS ============================================================
+// ============ FUNCTIONS ============
 
 // Lock mutex m
 func (m *Mutex) Lock() {

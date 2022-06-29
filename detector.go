@@ -493,9 +493,9 @@ func isChain(stack *depStack, dep *dependency) bool {
 func isCycleChain(stack *depStack, dep *dependency) bool {
 	for i := 0; i < stack.list.next.depEntry.holdingCount; i++ {
 		if stack.list.next.depEntry.holdingSet[i] == dep.mu {
-			// stack.push(dep, -1)
-			res := checkRWCycle(stack, dep, i)
-			// stack.pop()
+			stack.push(dep, -1)
+			res := checkRWCycle(stack)
+			stack.pop()
 			return res
 		}
 	}
@@ -506,31 +506,30 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 // rwlocks.
 //  Args:
 //   stack (*depStack): stack representing the current chain
-//   dep (*dependency): dependency which should be added
-//   index (int): index of the element in the holding set of the dependency at the
 //    bottom of the stack
 //  Returns:
 //    (bool): true if the cycle is valid regarding rw-locks, false otherwise
-func checkRWCycle(stack *depStack, dep *dependency, index int) bool {
+func checkRWCycle(stack *depStack) bool {
+	// traverse through the top two dependencies in the stack
+	for _, c := range []*linkedList{stack.tail.prev, stack.tail} {
+		// the path can only be invalid if the lock was acquired by rlock
+		isRead := *c.depEntry.mu.getIsRead()
+		if !isRead {
+			continue
+		}
 
-	// if the lock mu in dep was not acquired as rLock, the cycle is valid
-	if !*dep.mu.getIsRead() {
-		return true
-	}
+		// if c is the top element in tha stack set first to the first element
+		next := c.next
+		if next == nil {
+			next = stack.list.next
+		}
 
-	// if the mu in the holding set of the bottom dependency in the stack,
-	// which is equal to mu of dep was also acquired by rlock, the cycle is not
-	// valid
-	if *stack.list.next.depEntry.holdingSet[index].getIsRead() {
-		return false
-	}
-
-	// the circle is not valid if the lock in the holding set of dep and the mu in
-	// the dependency at the top dependency in the stack are both rlock
-	if *stack.tail.depEntry.mu.getIsRead() {
-		for i := 0; i < dep.holdingCount; i++ {
-			if stack.tail.depEntry.mu == dep.holdingSet[i] {
-				if *dep.holdingSet[i].getIsRead() {
+		// traverse through the holding set of next
+		for i := 0; i < c.depEntry.holdingCount; i++ {
+			// if there is a lock in the holding set which is equal to c.depEntry.mu
+			// which was also acquired by read, the circle can not lead to a deadlock
+			if next.depEntry.holdingSet[i] == c.depEntry.mu {
+				if *c.depEntry.holdingSet[i].getIsRead() {
 					return false
 				}
 			}
