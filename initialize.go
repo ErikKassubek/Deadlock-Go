@@ -34,30 +34,34 @@ import (
 	"time"
 )
 
-// it is not possible to set options after initialization
+// global variable to check whether the detector was already initialized
 var initialized = false
 
-// initialize deadlock detector
+// initialize initializes the deadlock detector.
+// This starts the periodical detection.
+//  Returns:
+//   nil
 func initialize() {
 	initialized = true
-	// if periodical detection is disabled
+
+	// return if periodical detection is disabled
 	if !opts.periodicDetection {
 		return
 	}
 
+	// go routine to run the periodical detection in the background
 	go func() {
+		// timer to send a signals at equal intervals
 		timer := time.NewTicker(opts.periodicDetectionTime)
 
-		// for each routine only the dependency, which was last added will be used
-		// in the periodical detection
+		// initialize lashHolding. This slice stores the dependencies which were
+		// considered in the last detection round, so that the detection only takes
+		// place, if the situation has changed
 		lastHolding := make([]mutexInt, opts.maxRoutines)
 
-		for {
-			select {
-			case <-timer.C:
-				periodicalDetection(&lastHolding)
-			}
+		// run the periodical detection if a timer signal is received
+		for range timer.C {
+			periodicalDetection(&lastHolding)
 		}
 	}()
-
 }

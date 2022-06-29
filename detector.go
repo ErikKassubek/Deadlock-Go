@@ -509,6 +509,8 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 //   dep (*dependency): dependency which should be added
 //   index (int): index of the element in the holding set of the dependency at the
 //    bottom of the stack
+//  Returns:
+//    (bool): true if the cycle is valid regarding rw-locks, false otherwise
 func checkRWCycle(stack *depStack, dep *dependency, index int) bool {
 
 	// if the lock mu in dep was not acquired as rLock, the cycle is valid
