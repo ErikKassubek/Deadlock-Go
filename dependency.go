@@ -32,22 +32,34 @@ These are all the locks which were hold by the same routine, when l was
 acquired.
 */
 
-// struct to implement a dependency
+// Type to implement a dependency
+// A dependency represents a set of edges in a lock tree
+// It consist of a lock l and a list of all locks, on which l depends
+// i.e. all lock which were already locked by the same routine, when
+// l was acquired.
 type dependency struct {
-	lock         mutexInt   // lock
+	mu           mutexInt   // lock
+	holdingSet   []mutexInt // locks which where locked while mu was acquired
 	holdingCount int        // on how many locks does mu depend
-	holdingSet   []mutexInt // lock which where hold while mu was acquired
 }
 
-// create a new dependency object
-func newDependency(lock mutexInt, numberOfLocks int,
-	currentLocks [](mutexInt)) dependency {
+// newDependency creates and returns a new dependency object
+//  Args:
+//   mu (mutexInt): lock of the dependency
+//   currentLocks ([]mutexInt): list of locks mu depends on
+//   numberOfLocks (int): number of locks lock depends on
+//  Returns:
+//   (dependency) : the created dependency
+func newDependency(lock mutexInt, currentLocks []mutexInt,
+	numberOfLocks int) dependency {
+	// create dependency
 	d := dependency{
-		lock:         lock,
+		mu:           lock,
 		holdingCount: numberOfLocks,
 		holdingSet:   make([]mutexInt, opts.maxHoldingDepth),
 	}
 
+	// copy currentLocks into d.holding set
 	for i := 0; i < numberOfLocks; i++ {
 		d.holdingSet = append(d.holdingSet, currentLocks[i])
 	}
@@ -55,11 +67,28 @@ func newDependency(lock mutexInt, numberOfLocks int,
 	return d
 }
 
-// update dependencies
-func (d *dependency) update(lock mutexInt, hs *[]mutexInt, len int) {
-	d.lock = lock
-	d.holdingCount = len
-	for i := 0; i < len; i++ {
+// update updates a dependency
+//  Args:
+//   lock (mutexInt): new lock of the dependency
+//   hs (*[]mutexInt): new holding set
+//   numberOfLocks (int): new number of locks lock depends on
+//  Returns:
+//   nil
+func (d *dependency) update(lock mutexInt, hs *[]mutexInt, numberOfLocks int) {
+	// set new lock
+	d.mu = lock
+
+	// set new holding set
+	for i := 0; i < numberOfLocks; i++ {
 		d.holdingSet[i] = (*hs)[i]
 	}
+
+	// set element in d.holdingSet to nil if they were not replaced by
+	// new elements
+	for i := numberOfLocks; i < d.holdingCount; i++ {
+		d.holdingSet[i] = nil
+	}
+
+	// set new holdingCount
+	d.holdingCount = numberOfLocks
 }

@@ -32,6 +32,7 @@ to update these trees.
 */
 
 import (
+	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -82,7 +83,7 @@ func newRoutine() {
 	routinesIndex++
 	createRoutineLock.Unlock()
 	for i := 0; i < opts.maxDependencies; i++ {
-		dep := newDependency(nil, 0, nil)
+		dep := newDependency(nil, nil, 0)
 		r.dependencies[i] = &dep
 	}
 }
@@ -190,7 +191,7 @@ func (r *routine) updateLock(m mutexInt) {
 func (r *routine) hasEntryDhl(m mutexInt, dhl *([]*dependency)) bool {
 	for _, d := range *dhl {
 		hc := r.holdingCount
-		if d.lock == m && d.holdingCount == hc {
+		if d.mu == m && d.holdingCount == hc {
 			i := 0
 			for d.holdingSet[i] == r.holdingSet[i] && i < hc {
 				i++
@@ -237,4 +238,19 @@ func getRoutineIndex() int {
 		return -1
 	}
 	return index
+}
+
+// check for double locking
+func (r *routine) checkDoubleLocking(m mutexInt, index int, rLock bool) {
+	if *(m.getIsLockedRoutineIndex()) == index {
+
+		// no double locking if both are reader locks
+		if m.isRWLock() && *m.getIsRead() && rLock {
+			return
+		}
+
+		reportDeadlockDoubleLocking(m)
+		FindPotentialDeadlocks()
+		os.Exit(2)
+	}
 }

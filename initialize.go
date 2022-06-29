@@ -47,13 +47,11 @@ func initialize() {
 
 	go func() {
 		timer := time.NewTicker(opts.periodicDetectionTime)
-		stack := newDepStack()
-		lastHolding := make([]mutexInt, opts.maxRoutines)
 
 		for {
 			select {
 			case <-timer.C:
-				periodicalDetection(&stack, &lastHolding)
+				periodicalDetection()
 			}
 		}
 	}()

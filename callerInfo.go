@@ -29,15 +29,27 @@ callerInfo.go
 Implementation of a struct to save the caller info of locks
 */
 
-// type to save info about caller
+/* Type to save info about caller.
+A caller is an instance where a lock was created or locked.
+*/
 type callerInfo struct {
-	file       string
-	line       int
-	create     bool // true: create, false: lock
+	// name of the file with full path
+	file string
+	// number of the line, in which the lock is created or locked
+	line int
+	// true: create, false: lock
+	create bool
+	// string to save the call stack
 	callStacks string
 }
 
-// create a new caller info
+// newInfo creates and returns a new callerInfo
+//  Args:
+//   file (string): name of the file
+//   line (int): line in the file where the call happenedr
+//   create (bool): set to true if the call was a lock creation or false, if it was a lock acquiring
+//  Returns:
+//   callerInfo: the created callerInfo
 func newInfo(file string, line int, create bool, callStack string) callerInfo {
 	return callerInfo{
 		file:       file,
