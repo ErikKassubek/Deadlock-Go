@@ -39,16 +39,24 @@ import (
 
 // Type to implement a lock
 // It can be used as an drop in replacement
+// TODO: check if this can be lowercase
 type Mutex struct {
-	mu                   *sync.Mutex
-	context              []callerInfo // info about the creation and lock/unlock of this lock
-	in                   bool         // set to true after lock was initialized
-	numberLocked         int          // 1 if locked, 0 otherwise
-	isLockedRoutineIndex int          // index of the routine, which holds the lock
-	memoryPosition       uintptr      // position of the mutex in memory
+	// mutex for the actual locking
+	mu *sync.Mutex
+	// info about the creation and lock/unlock of this lock
+	context []callerInfo
+	// set to true after lock was initialized
+	in bool
+	// numberLocked stores how often the mutex is currently locked
+	numberLocked int
+	// index of the routine, which holds the lock
+	isLockedRoutineIndex int
+	// position of the mutex in memory
+	memoryPosition uintptr
 }
 
-// create Lock
+// create and return a new lock, which can be used as a drop-in replacement for
+// sync.Mutex
 func NewLock() *Mutex {
 	// initialize detector if necessary
 	if !initialized {
@@ -60,8 +68,12 @@ func NewLock() *Mutex {
 		in:                   true,
 		isLockedRoutineIndex: -1,
 	}
+
+	// save the position of the save command
 	_, file, line, _ := runtime.Caller(1)
 	m.context = append(m.context, newInfo(file, line, true, ""))
+
+	// save the memory position of the mutex
 	m.memoryPosition = uintptr(unsafe.Pointer(&m))
 
 	return &m
@@ -70,36 +82,52 @@ func NewLock() *Mutex {
 // ============ GETTER ============
 
 // getter for isLocked
+//  Returns:
+//   (*int): numberLocked
 func (m *Mutex) getNumberLocked() *int {
 	return &m.numberLocked
 }
 
 // getter for isLockedRoutineIndex
+//  Returns:
+//   (*int): isLockedRoutineIndex
 func (m *Mutex) getIsLockedRoutineIndex() *int {
 	return &m.isLockedRoutineIndex
 }
 
 // getter for context
+//  Returns:
+//   (*[]callerInfo): caller info of the lock
 func (m *Mutex) getContext() *[]callerInfo {
 	return &m.context
 }
 
 // getter for memoryPosition
+// Returns:
+//  (uintptr): memoryPosition
 func (m *Mutex) getMemoryPosition() uintptr {
 	return m.memoryPosition
 }
 
 // getter for in
+//  Returns:
+//   (bool): true if the lock was initialized, false otherwise
 func (m *Mutex) getIn() *bool {
 	return &m.in
 }
 
 // getter for mu
+// Returns:
+//  (bool): true, false for RWMutex
+//  (*sync.Mutex): underlying sync.Mutex mu
+//  (*sync.RWMutex): nil, underlying sync.RWMutex mu for RWMutex
 func (m *Mutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
 	return true, m.mu, nil
 }
 
 // empty getter for isRead, is needed for mutexInt
+//  Returns:
+//   (*bool): false
 func (m *Mutex) getIsRead() *bool {
 	res := false
 	return &res
@@ -108,12 +136,18 @@ func (m *Mutex) getIsRead() *bool {
 // ============ FUNCTIONS ============
 
 // Lock mutex m
+// Returns:
+//  nil
 func (m *Mutex) Lock() {
+	// call the lock function with the mutex interface
 	lockInt(m, false)
 }
 
 // Trylock mutex m
+//  Returns:
+//   (bool): true if locking was successful, false otherwise
 func (m *Mutex) TryLock() bool {
+	// panic if the lock was not initialized
 	if !*m.getIn() {
 		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
 			"x := NewLock()")
@@ -125,6 +159,7 @@ func (m *Mutex) TryLock() bool {
 		initialize()
 	}
 
+	// try to lock mu
 	d, l, t := m.getLock()
 	var res bool
 	if d {
@@ -133,19 +168,23 @@ func (m *Mutex) TryLock() bool {
 		res = t.TryLock()
 	}
 
+	// if locking was successful increase numberLocked
 	if res {
 		*m.getNumberLocked() += 1
 	}
 
+	// return if detection is disabled
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
 		return res
 	}
 
+	// initialize routine if necessary
 	index := getRoutineIndex()
 	if index == -1 {
 		// create new routine, if not initialized
 		newRoutine()
 	}
+	index = getRoutineIndex()
 
 	r := &routines[index]
 
@@ -162,6 +201,9 @@ func (m *Mutex) TryLock() bool {
 }
 
 // Unlock mutex m
+//  Returns:
+//   nil
 func (m *Mutex) Unlock() {
+	// call the unlock method for the mutexInt interface
 	unlockInt(m)
 }

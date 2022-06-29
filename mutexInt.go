@@ -33,9 +33,10 @@ Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
 /*
 mutexInt.go
 This file implements and interface for Mutex and RWMutex.
-It also implements code which is used for both mutex and rwmutex
+It also implements code which is used for both mutex and rw-mutex
 */
 
+// creat and interface for Mutex and RWMutex
 type mutexInt interface {
 	getNumberLocked() *int
 	getIsLockedRoutineIndex() *int
@@ -46,8 +47,14 @@ type mutexInt interface {
 	getIsRead() *bool
 }
 
-// lock the mutex or rwmutex and update the detector data
+// lock the mutex or rw-mutex and update the detector data
+//  Args:
+//   m (mutexInt): mutex or rw-mutex to lock
+//   rLock (bool): if set to true, the lock is a reader lock
+//  Returns:
+//   nil
 func lockInt(m mutexInt, rLock bool) {
+	// panic if the lock was not initialized
 	if !*m.getIn() {
 		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
 			"x := NewLock()")
@@ -59,11 +66,14 @@ func lockInt(m mutexInt, rLock bool) {
 		initialize()
 	}
 
+	// defer the actual locking
 	defer func() {
 		d, l, t := m.getLock()
 		if d {
+			// lock if m is mutex
 			l.Lock()
 		} else {
+			// lock if m is rw-mutex
 			if rLock {
 				t.RLock()
 			} else {
@@ -74,62 +84,83 @@ func lockInt(m mutexInt, rLock bool) {
 		*m.getNumberLocked() += 1
 	}()
 
-	// if detection is disabled
+	// return if detection is disabled
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
 		return
 	}
 
+	// create new routine, if not initialized
 	index := getRoutineIndex()
 	if index == -1 {
-		// create new routine, if not initialized
 		newRoutine()
 	}
 	index = getRoutineIndex()
 
 	r := &routines[index]
 
-	// check for double locking
+	// check if the locking would lead to double locking
 	if opts.checkDoubleLocking && *m.getNumberLocked() != 0 {
 		r.checkDoubleLocking(m, index, rLock)
 	}
 
 	*m.getIsLockedRoutineIndex() = index
 
-	numRoutine := runtime.NumGoroutine()
 	// update data structures if more than on routine is running
+	numRoutine := runtime.NumGoroutine()
 	if numRoutine > 1 {
 		(*r).updateLock(m)
 	}
 }
 
-// unlock the mutex or rwmutex and update the detector data
+// unlock the mutex or rw-mutex and update the detector data
+// Args:
+//  m (mutexInt): mutex or RWMutex to unlock
+// Returns:
+//  nil
 func unlockInt(m mutexInt) {
+	// panic if the lock was not initialized
+	if !*m.getIn() {
+		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
+			"x := NewLock()")
+		panic(errorMessage)
+	}
+
+	// panic if lock was not locked
 	if *m.getNumberLocked() == 0 {
 		errorMessage := fmt.Sprint("Tried to unLock lock ", &m,
 			" which was not locked.")
 		panic(errorMessage)
 	}
+
+	// defer the actual unlocking
 	defer func() {
 		d, l, r := m.getLock()
 		if d {
+			// unlock if m is mutex
 			l.Unlock()
 		} else {
+			// unlock if m is rw-mutex
 			if *m.getIsRead() {
 				r.RUnlock()
 			} else {
 				r.Unlock()
 			}
 		}
-		*m.getIsLockedRoutineIndex() = -1
+
+		// update numberLocked and isLockedRoutineIndex
 		*m.getNumberLocked() -= 1
+		if *m.getNumberLocked() == 0 {
+			*m.getIsLockedRoutineIndex() = -1
+		}
 	}()
 
+	// return if detection is disabled
 	if !opts.periodicDetection && !opts.comprehensiveDetection {
 		return
 	}
 
+	// update data structures if more than on routine is running
 	index := getRoutineIndex()
-
 	r := &routines[index]
 	(*r).updateUnlock(m)
 }
