@@ -35,6 +35,13 @@ import (
 	"runtime"
 )
 
+// colors for deadlock messages
+const (
+	yellow = "\033[1;33m%s\033[0m"
+	red    = "\033[1;31m%s\033[0m"
+	blue   = "\033[0;36m%s\033[0m"
+)
+
 // report if double locking is detected
 func reportDeadlockDoubleLocking(m mutexInt) {
 	fmt.Printf(red, "DEADLOCK (DOUBLE LOCKING)\n\n")
@@ -104,5 +111,5 @@ func reportDeadlock(stack *depStack) {
 // output deadlocks detected from current status
 // current chain will be the whole cycle
 func reportDeadlockPeriodical(stack *depStack) {
-	fmt.Printf(red, "PROGRAM RAN INTO DEADLOCK\n\n")
+	fmt.Printf(red, "THE PROGRAM WAS TERMINATED BECAUSE IT DETECTED A LOCAL DEADLOCK\n\n")
 }

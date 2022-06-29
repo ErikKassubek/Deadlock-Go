@@ -42,17 +42,13 @@ import (
 	"runtime"
 )
 
-// colors for deadlock messages
-const (
-	yellow = "\033[1;33m%s\033[0m"
-	red    = "\033[1;31m%s\033[0m"
-	blue   = "\033[0;36m%s\033[0m"
-)
-
 // ================ Comprehensive Detection ================
 
 // FindPotentialDeadlock is the main function to start the comprehensive
-// detection of deadlocks. It has to be run at the end of a program to
+// detection of deadlocks. The comprehensive detection uses depth-first search to
+// search for loop in the dependency chains of the created lock trees, which are
+// represented by the dependency lists of the routines.
+// It has to be run at the end of a program to
 // detect potential deadlocks in the program. This can be one by calling
 // it as a defer statement at the beginning of the main function of the
 // program.
@@ -197,8 +193,8 @@ func detect() {
 //  Returns:
 //   nil
 func dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
-	// Traverse through all routines to find potential next step in the path
-	// routines with index <= visiting have already been used as starting routine
+	// Traverse through all routines to find the potential next step in the path.
+	// Routines with index <= visiting have already been used as starting routine
 	// and therefore don't have to been considered again.
 	for i := visiting + 1; i < routinesIndex; i++ {
 		routine := routines[i]
@@ -239,166 +235,305 @@ func dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 
 // ================ Periodical Detection ================
 
-// run periodical deadlock detection check
-func periodicalDetection() {
-	// only check if at least two routines are running
+// periodicalDetection is the main function to start the periodical detection.
+// It is called periodically to detect if the program is in a local deadlock
+// state i.e. a state in which only a subset of the running routines are in
+// a deadlock position.
+//  The program will be terminated if such a situation occurs and the comprehensive
+//  detection will automatically be started.
+//  If the program is in a total deadlock, i.e. no routine is running anymore,
+//  it is normally automatically terminated my the go-runtime deadlock detection.
+//  In this case the comprehensive detection can not be started.
+// To detect such local deadlocks, the detector uses the dependency of each
+// routine, which was last added to the routine and searches for circles in
+// this set of dependencies.
+//  Args:
+//   lastHolding (*[]mutexInt): list of the dependencies which were considered
+//    in the last run
+//  Returns:
+//   nil
+func periodicalDetection(lastHolding *[]mutexInt) {
+	// only check if at least two routines are currently running
 	if runtime.NumGoroutine() < 2 {
 		return
 	}
 
-	stack := newDepStack()
-	lastHolding := make([]mutexInt, opts.maxRoutines)
+	// A stack is used to represent the currently explored path in the lock trees.
+	// A dependency is added to the path by pushing it on top of the stack.
 
-	candidates := 0 // number of threads holding locks
-
+	// the detection is only run if the number of routines which hold at least two
+	// locks is at least 2 and the situation has changed since the late periodical check
+	nrThreadsHoldingLocks := 0
 	sthNew := false
+
+	// traverse all routines
 	for index, r := range routines {
+		// check if the routine holds at least two lock and the last added dependency
+		// has changed since the last check
 		holds := r.holdingCount - 1
-		if holds >= 0 && lastHolding[index] != r.holdingSet[holds] {
-			lastHolding[index] = r.holdingSet[holds]
+		if holds >= 0 && (*lastHolding)[index] != r.holdingSet[holds] {
+			(*lastHolding)[index] = r.holdingSet[holds]
 			sthNew = true
 			if holds > 0 {
-				candidates++
+				nrThreadsHoldingLocks++
 			}
-		} else if holds < 0 && lastHolding[index] != nil {
-			lastHolding[index] = nil
+		} else if holds < 0 && (*lastHolding)[index] != nil {
+			(*lastHolding)[index] = nil
 			sthNew = true
 		}
 	}
 
-	// if nothing has changed since the last check
-	if !sthNew {
+	// abort the detection if nothing has changed or not enough routines hold locks
+	if !sthNew || nrThreadsHoldingLocks <= 1 {
 		return
 	}
-	if candidates > 1 {
-		detectionPeriodical(&lastHolding, &stack)
-	}
 
+	// run the detection
+	detectionPeriodical(lastHolding)
 }
 
-// analyses the current state for deadlocks
-func detectionPeriodical(lastHolding *([]mutexInt), stack *depStack) {
+// detectPeriodical starts the search for local deadlocks.
+// It uses depth-first search to search for cyclic chains in the set of
+// dependencies which contain the dependencies which were last added to each
+// routine
+// 	Args:
+//   lastHolding (*[]mutexInt): list with dependencies
+//  Returns:
+//   nil
+func detectionPeriodical(lastHolding *[]mutexInt) {
+	// A stack is used to represent the currently explored path in the lock trees.
+	// A dependency is added to the path by pushing it on top of the stack.
+	stack := newDepStack()
+
+	// every dependency can only be used once in the path
 	isTraversed := make([]bool, opts.maxRoutines)
+
+	// traverse all routines as starting routine
 	for index, r := range routines {
-		if r.curDep == nil || r.index < 0 {
+		// routines with an index >= routinesIndex have not been used in the program
+		if index >= routinesIndex {
+			break
+		}
+
+		// continue if the routine has not acquired a dependency
+		if r.curDep == nil {
 			continue
 		}
+
 		isTraversed[index] = true
 
+		// add the dependency as first dependency of the path to the stack and
+		// start the recursive search for a cyclic path
 		stack.push(r.curDep, index)
-		dfsPeriodical(stack, index, isTraversed, lastHolding)
+		dfsPeriodical(&stack, index, isTraversed, lastHolding)
+
+		// if no cycle is found with this dependency it is removed from the path
 		stack.pop()
 		r.curDep = nil
 	}
 }
 
-// depth first search on current locks
+// dfsPeriodical runs the recursive depth-first search.
+// Only paths which build a valid chain are explored.
+// After a new dependency is added to the currently explored path, it is checked,
+// if the path forms a circle.
+//  Args:
+//   stack (*depStack): stack witch represent the currently explored path
+//   visiting int: index of the routine of the first element in the currently explored path
+//   isTraversed (*([]bool)): list which stores which routines have already been traversed
+//    (either as starting routine or as a routine which already has a dep in the current path)
+//   lastHolding (*[]mutexInt): list with dependencies
+//  Returns:
+//   nil
 func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 	lastHolding *[]mutexInt) {
+	// Traverse through all routines to find the potential next step in the path.
+	// Routines with index <= visiting have already been used as starting routine
+	// and therefore don't have to been considered again.
 	for i := visiting + 1; i < routinesIndex; i++ {
 		r := routines[i]
-		if r.curDep == nil || r.index < 0 {
+
+		// continue if the routine has no current dependency or has already be traversed
+		if r.curDep == nil || isTraversed[i] {
 			continue
 		}
-		if !isTraversed[i] {
-			dep := r.curDep
-			if !isChain(stack, dep) {
-				continue
-			}
-			if isCycleChain(stack, dep) {
-				stack.push(dep, i)
-				sthNew := false
-				for cl := stack.list.next; cl != nil; cl = cl.next {
-					routineInChain := routines[cl.index]
-					holds := routineInChain.holdingCount - 1
-					if (holds >= 0 &&
-						(*lastHolding)[cl.index] != routineInChain.holdingSet[holds]) ||
-						(holds < 0 && (*lastHolding)[cl.index] != nil) {
-						sthNew = true
-						break
-					}
+
+		dep := r.curDep
+
+		// check if adding dep to the current path would lead to a valid dependency
+		// chain
+		if !isChain(stack, dep) {
+			continue
+		}
+
+		// check if adding dep to the curring path would lead to a cyclic dependency
+		// chain. This would indicate a deadlock.
+		if isCycleChain(stack, dep) {
+			stack.push(dep, i)
+
+			// check if the last added dependency in on of the routines in the path
+			// has changed since the beginning of the detection. In this case, the
+			// program will assume it was a false alarm and will not terminate the
+			// program
+			sthNew := false
+
+			// traverse alle routines in the current dependency chain
+			for cl := stack.list.next; cl != nil; cl = cl.next {
+				routineInChain := routines[cl.index]
+
+				// check if the last added dependency has changed
+				holds := routineInChain.holdingCount - 1
+				if (holds >= 0 &&
+					(*lastHolding)[cl.index] != routineInChain.holdingSet[holds]) ||
+					(holds < 0 && (*lastHolding)[cl.index] != nil) {
+					sthNew = true
+					break
 				}
-				if !sthNew { // nothing changed in cycled threads, deadlock
-					reportDeadlockPeriodical(stack)
-					FindPotentialDeadlocks()
-					os.Exit(2)
-				}
-				stack.pop()
-			} else {
-				isTraversed[routinesIndex] = true
-				stack.push(dep, routinesIndex)
-				dfsPeriodical(stack, visiting, isTraversed, lastHolding)
-				stack.pop()
-				isTraversed[routinesIndex] = false
 			}
+
+			// if nothing has changed the program assumes a deadlock.
+			// Therefore it reports the deadlock, starts the comprehensive detection
+			// to search for other possible deadlocks and terminates the program.
+			if !sthNew {
+				reportDeadlockPeriodical(stack)
+				FindPotentialDeadlocks()
+				os.Exit(2)
+			}
+			stack.pop()
+		} else {
+			// if the chain is not a cycle, the dependency is added to the current
+			// path and the search is continued recursively
+			isTraversed[routinesIndex] = true
+			stack.push(dep, routinesIndex)
+			dfsPeriodical(stack, visiting, isTraversed, lastHolding)
+
+			// if no cycle has been found with dep, it is removed from the path
+			stack.pop()
+			isTraversed[routinesIndex] = false
 		}
 	}
 }
 
 // ================ Checks for chains and Cycles ================
 
-// check if adding dep to chain will still be a valid chain
+// isCain checks if adding dep to the current path represented by stack is
+// still a valid path.
+//  A valid path contains the same dependency only once and contains the same
+//  lock only once. A path is also not valid if there exist two locks in the
+// holdings sets of two different dependencies in the path, such that the locks
+// are equal. This would be a gate lock situation. For RW-Locks this is not
+// true if both of the locks were acquired with RLock, because RLocks don't
+// have to work as gate locks
+//  Args:
+//   stack (*depStack): stack representing the current path
+//   dep (*dependency): dependency for which it should be checked if it can be
+//    added to the path
+//  Returns:
+//   (bool): true if dep can be added to the current path, false otherwise
 func isChain(stack *depStack, dep *dependency) bool {
+	// traverse all dependencies in the current path
 	for cl := stack.list.next; cl != nil; cl = cl.next {
+		// a path cannot have the same dependency multiple times
 		if cl.depEntry == dep {
 			return false
 		}
+
+		// two dependencies in the chain can not have the same mu
 		if cl.depEntry.mu == dep.mu {
 			return false
 		}
-		// RLocks do not function as guard locks
+
+		// pairwise compare the elements in the holding sets of the entry of the path
+		// and dep. They cannot be equal except if both are RLocks
 		for i := 0; i < cl.depEntry.holdingCount; i++ {
 			for j := 0; j < dep.holdingCount; j++ {
-				clHs := cl.depEntry.holdingSet[i]
-				depHs := dep.holdingSet[j]
-				if clHs == depHs {
-					if !(*clHs.getIsRead() && *depHs.getIsRead()) {
+				lockInStackHoldingSet := cl.depEntry.holdingSet[i]
+				lockInDepHoldingSet := dep.holdingSet[j]
+
+				if lockInStackHoldingSet == lockInDepHoldingSet {
+
+					// this does not lead to a disqualification of the path if both of
+					// the locks are RLock
+					if !(*lockInStackHoldingSet.getIsRead() && *lockInDepHoldingSet.getIsRead()) {
 						return false
 					}
 				}
 			}
 		}
 	}
+
+	// adding dep to the current path is valid, if the lock mu of the top element
+	// in the stack (the last dependency in the current path) is in the holding set
+	// of dep
 	for i := 0; i < dep.holdingCount; i++ {
 		if stack.tail.depEntry.mu == dep.holdingSet[i] {
 			return true
 		}
 	}
+
 	return false
 }
 
-// check if adding dep to chain will give a cycle chain
+// isCycleCain checks if adding a dependency dep to the current path represented
+// by stack would lead to a cyclic chain, meaning the lock mu of dep is in the
+// holding set of the first dependency in the path. This would indicate a possible
+// deadlock situation. With RW-locks it is possible, that a cyclic path
+// does not indicate a potential deadlock. In this case, the function assumes,
+// that the path does not create a valid cyclic chain.
+//  isCycleChain assumes, that adding dep to the path results to a valid path
+//  (see isChain)
+// Args:
+//  stack (*depStack): stack representing the current path
+//  dep (*dependency): dependency for which it should be checked if adding dep
+//   to the path would lead to a cyclic path, wh
+// Returns:
+//  (bool): true if dep can be added to the current path to create a valid cyclic
+//   chain, false if the path is no cycle, or it contains RW-lock with which
+//   the cycle does not indicate a deadlock
 func isCycleChain(stack *depStack, dep *dependency) bool {
 	for i := 0; i < stack.list.next.depEntry.holdingCount; i++ {
 		if stack.list.next.depEntry.holdingSet[i] == dep.mu {
-			stack.push(dep, -1)
-			res := checkRWCycle(stack)
-			stack.pop()
+			// stack.push(dep, -1)
+			res := checkRWCycle(stack, dep, i)
+			// stack.pop()
 			return res
 		}
 	}
 	return false
 }
 
-// check if the cycle does lead to a deadlock even if it contains rwlocks
-func checkRWCycle(stack *depStack) bool {
-	for c := stack.list.next; c != nil; c = c.next {
-		isRead := *c.depEntry.mu.getIsRead()
-		if !isRead {
-			continue
-		}
-		for i := 0; i < c.depEntry.holdingCount; i++ {
-			next := c.next
-			if next == nil {
-				next = stack.list.next
-			}
-			if next.depEntry.holdingSet[i] == c.depEntry.mu {
-				isReadHS := *c.depEntry.holdingSet[i].getIsRead()
-				if isReadHS {
+// checkRWCycle check if the cycle does lead to a deadlock even if it contains
+// rwlocks.
+//  Args:
+//   stack (*depStack): stack representing the current chain
+//   dep (*dependency): dependency which should be added
+//   index (int): index of the element in the holding set of the dependency at the
+//    bottom of the stack
+func checkRWCycle(stack *depStack, dep *dependency, index int) bool {
+
+	// if the lock mu in dep was not acquired as rLock, the cycle is valid
+	if !*dep.mu.getIsRead() {
+		return true
+	}
+
+	// if the mu in the holding set of the bottom dependency in the stack,
+	// which is equal to mu of dep was also acquired by rlock, the cycle is not
+	// valid
+	if *stack.list.next.depEntry.holdingSet[index].getIsRead() {
+		return false
+	}
+
+	// the circle is not valid if the lock in the holding set of dep and the mu in
+	// the dependency at the top dependency in the stack are both rlock
+	if *stack.tail.depEntry.mu.getIsRead() {
+		for i := 0; i < dep.holdingCount; i++ {
+			if stack.tail.depEntry.mu == dep.holdingSet[i] {
+				if *dep.holdingSet[i].getIsRead() {
 					return false
 				}
 			}
 		}
 	}
+
 	return true
 }

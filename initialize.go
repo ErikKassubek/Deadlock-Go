@@ -48,10 +48,14 @@ func initialize() {
 	go func() {
 		timer := time.NewTicker(opts.periodicDetectionTime)
 
+		// for each routine only the dependency, which was last added will be used
+		// in the periodical detection
+		lastHolding := make([]mutexInt, opts.maxRoutines)
+
 		for {
 			select {
 			case <-timer.C:
-				periodicalDetection()
+				periodicalDetection(&lastHolding)
 			}
 		}
 	}()
