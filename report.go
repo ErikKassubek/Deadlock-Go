@@ -45,6 +45,8 @@ const (
 // report if double locking is detected
 func reportDeadlockDoubleLocking(m mutexInt) {
 	fmt.Printf(red, "DEADLOCK (DOUBLE LOCKING)\n\n")
+
+	// print information about the involved lock
 	fmt.Printf(yellow, "Initialization of lock involved in deadlock:\n\n")
 	context := *m.getContext()
 	fmt.Println(context[0].file, context[0].line)
@@ -64,8 +66,10 @@ func reportDeadlockDoubleLocking(m mutexInt) {
 //report a found deadlock
 func reportDeadlock(stack *depStack) {
 	fmt.Printf(red, "POTENTIAL DEADLOCK\n\n")
+
+	// print information about the locks in the circle
 	fmt.Printf(yellow, "Initialization of locks involved in potential deadlock:\n\n")
-	for cl := stack.list.next; cl != nil; cl = cl.next {
+	for cl := stack.stack.next; cl != nil; cl = cl.next {
 		for _, c := range *cl.depEntry.mu.getContext() {
 			if c.create {
 				fmt.Println(c.file, c.line)
@@ -75,7 +79,7 @@ func reportDeadlock(stack *depStack) {
 
 	if opts.collectCallStack {
 		fmt.Printf(yellow, "\nCallStacks of Locks involved in potential deadlock:\n\n")
-		for cl := stack.list.next; cl != nil; cl = cl.next {
+		for cl := stack.stack.next; cl != nil; cl = cl.next {
 			cont := *cl.depEntry.mu.getContext()
 			fmt.Printf(blue, "CallStacks for lock created at: ")
 			fmt.Printf(blue, cont[0].file)
@@ -90,7 +94,7 @@ func reportDeadlock(stack *depStack) {
 		}
 	} else {
 		fmt.Printf(yellow, "\nCalls of locks involved in potential deadlock:\n\n")
-		for cl := stack.list.next; cl != nil; cl = cl.next {
+		for cl := stack.stack.next; cl != nil; cl = cl.next {
 			for i, c := range *cl.depEntry.mu.getContext() {
 				if i == 0 {
 					fmt.Printf(blue, "Calls for lock created at: ")
@@ -108,8 +112,7 @@ func reportDeadlock(stack *depStack) {
 	fmt.Print("\n\n")
 }
 
-// output deadlocks detected from current status
-// current chain will be the whole cycle
-func reportDeadlockPeriodical(stack *depStack) {
+// print a message, that the program was terminated because of a detected local deadlock
+func reportDeadlockPeriodical() {
 	fmt.Printf(red, "THE PROGRAM WAS TERMINATED BECAUSE IT DETECTED A LOCAL DEADLOCK\n\n")
 }

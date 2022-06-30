@@ -63,7 +63,7 @@ func FindPotentialDeadlocks() {
 
 	// only run detector if at least two routines were running during the
 	// execution of the program
-	if routinesIndex > 1 {
+	if numberIndex > 1 {
 		// abort check if the lock trees contain less than 2 unique dependencies
 		if !isNumberDependenciesGreaterEqualTwo() {
 			return
@@ -91,7 +91,7 @@ func isNumberDependenciesGreaterEqualTwo() bool {
 	dependencyMap := make(map[string]struct{})
 
 	// parse all routines
-	for i := 0; i < routinesIndex; i++ {
+	for i := 0; i < numberIndex; i++ {
 		current := routines[i]
 
 		// parse routine i
@@ -154,10 +154,10 @@ func detect() {
 	// of the search.
 	// They can also be temporarily ignored, if a dependency of this routine
 	// is already in the path which is currently explored
-	isTraversed := make([]bool, routinesIndex)
+	isTraversed := make([]bool, numberIndex)
 
 	// traverse all routines as starting routine for the loop search
-	for i := 0; i < routinesIndex; i++ {
+	for i := 0; i < numberIndex; i++ {
 		routine := routines[i]
 
 		visiting = i
@@ -196,7 +196,7 @@ func dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 	// Traverse through all routines to find the potential next step in the path.
 	// Routines with index <= visiting have already been used as starting routine
 	// and therefore don't have to been considered again.
-	for i := visiting + 1; i < routinesIndex; i++ {
+	for i := visiting + 1; i < numberIndex; i++ {
 		routine := routines[i]
 
 		// continue if the routine has already been traversed
@@ -311,7 +311,7 @@ func detectionPeriodical(lastHolding *[]mutexInt) {
 	// traverse all routines as starting routine
 	for index, r := range routines {
 		// routines with an index >= routinesIndex have not been used in the program
-		if index >= routinesIndex {
+		if index >= numberIndex {
 			break
 		}
 
@@ -350,7 +350,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 	// Traverse through all routines to find the potential next step in the path.
 	// Routines with index <= visiting have already been used as starting routine
 	// and therefore don't have to been considered again.
-	for i := visiting + 1; i < routinesIndex; i++ {
+	for i := visiting + 1; i < numberIndex; i++ {
 		r := routines[i]
 
 		// continue if the routine has no current dependency or has already be traversed
@@ -378,7 +378,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 			sthNew := false
 
 			// traverse alle routines in the current dependency chain
-			for cl := stack.list.next; cl != nil; cl = cl.next {
+			for cl := stack.stack.next; cl != nil; cl = cl.next {
 				routineInChain := routines[cl.index]
 
 				// check if the last added dependency has changed
@@ -395,7 +395,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 			// Therefore it reports the deadlock, starts the comprehensive detection
 			// to search for other possible deadlocks and terminates the program.
 			if !sthNew {
-				reportDeadlockPeriodical(stack)
+				reportDeadlockPeriodical()
 				FindPotentialDeadlocks()
 				os.Exit(2)
 			}
@@ -403,13 +403,13 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 		} else {
 			// if the chain is not a cycle, the dependency is added to the current
 			// path and the search is continued recursively
-			isTraversed[routinesIndex] = true
-			stack.push(dep, routinesIndex)
+			isTraversed[numberIndex] = true
+			stack.push(dep, numberIndex)
 			dfsPeriodical(stack, visiting, isTraversed, lastHolding)
 
 			// if no cycle has been found with dep, it is removed from the path
 			stack.pop()
-			isTraversed[routinesIndex] = false
+			isTraversed[numberIndex] = false
 		}
 	}
 }
@@ -432,7 +432,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 //   (bool): true if dep can be added to the current path, false otherwise
 func isChain(stack *depStack, dep *dependency) bool {
 	// traverse all dependencies in the current path
-	for cl := stack.list.next; cl != nil; cl = cl.next {
+	for cl := stack.stack.next; cl != nil; cl = cl.next {
 		// a path cannot have the same dependency multiple times
 		if cl.depEntry == dep {
 			return false
@@ -466,7 +466,7 @@ func isChain(stack *depStack, dep *dependency) bool {
 	// in the stack (the last dependency in the current path) is in the holding set
 	// of dep
 	for i := 0; i < dep.holdingCount; i++ {
-		if stack.tail.depEntry.mu == dep.holdingSet[i] {
+		if stack.top.depEntry.mu == dep.holdingSet[i] {
 			return true
 		}
 	}
@@ -491,8 +491,8 @@ func isChain(stack *depStack, dep *dependency) bool {
 //   chain, false if the path is no cycle, or it contains RW-lock with which
 //   the cycle does not indicate a deadlock
 func isCycleChain(stack *depStack, dep *dependency) bool {
-	for i := 0; i < stack.list.next.depEntry.holdingCount; i++ {
-		if stack.list.next.depEntry.holdingSet[i] == dep.mu {
+	for i := 0; i < stack.stack.next.depEntry.holdingCount; i++ {
+		if stack.stack.next.depEntry.holdingSet[i] == dep.mu {
 			stack.push(dep, -1)
 			res := checkRWCycle(stack)
 			stack.pop()
@@ -511,7 +511,7 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 //    (bool): true if the cycle is valid regarding rw-locks, false otherwise
 func checkRWCycle(stack *depStack) bool {
 	// traverse through the top two dependencies in the stack
-	for _, c := range []*linkedList{stack.tail.prev, stack.tail} {
+	for _, c := range []*stackElement{stack.top.prev, stack.top} {
 		// the path can only be invalid if the lock was acquired by rlock
 		isRead := *c.depEntry.mu.getIsRead()
 		if !isRead {
@@ -521,7 +521,7 @@ func checkRWCycle(stack *depStack) bool {
 		// if c is the top element in tha stack set first to the first element
 		next := c.next
 		if next == nil {
-			next = stack.list.next
+			next = stack.stack.next
 		}
 
 		// traverse through the holding set of next

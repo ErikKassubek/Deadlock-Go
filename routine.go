@@ -40,21 +40,36 @@ import (
 	"github.com/petermattis/goid"
 )
 
+// map to map the internal routine id to index in routines
 var mapIndex = make(map[int64]int)
+
+// lock for the creation of a new routine
 var createRoutineLock sync.Mutex
+
+// list of routines
 var routines = make([]routine, opts.maxRoutines)
-var routinesIndex = 0
+
+// number of routines in routines
+var numberIndex = 0
 
 // type to implement structures for lock logging
 type routine struct {
-	index                     int        // index of the routine
-	holdingCount              int        // number of currently hold locks
-	holdingSet                []mutexInt // set of currently hold locks
-	dependencyMap             map[uintptr]*[]*dependency
-	dependencies              [](*dependency)  // pre-allocated dependencies
-	curDep                    *dependency      // current dependency
-	depCount                  int              // counter for dependencies
-	collectedSingleLevelLocks map[string][]int // info about collected single level locks
+	// index of the routine
+	index int
+	// number of currently hold locks
+	holdingCount int
+	// set of currently hold locks
+	holdingSet []mutexInt
+	// map of the dependencies
+	dependencyMap map[uintptr]*[]*dependency
+	// list of dependencies, implements the lock tree
+	dependencies [](*dependency)
+	// last inserted dependency
+	curDep *dependency
+	// number of dependencies in dependency map
+	depCount int
+	// map to save information about collected single level
+	collectedSingleLevelLocks map[string][]int
 }
 
 // Initialize the go routine
@@ -65,7 +80,7 @@ func newRoutine() {
 
 	createRoutineLock.Lock()
 	r := routine{
-		index:                     routinesIndex,
+		index:                     numberIndex,
 		holdingCount:              0,
 		holdingSet:                make([]mutexInt, opts.maxHoldingDepth),
 		dependencyMap:             make(map[uintptr]*[]*dependency),
@@ -74,13 +89,13 @@ func newRoutine() {
 		depCount:                  0,
 		collectedSingleLevelLocks: make(map[string][]int),
 	}
-	if routinesIndex >= opts.maxRoutines {
+	if numberIndex >= opts.maxRoutines {
 		panic(`Number of routines is greater than max number of routines. 
 			Increase Opts.MaxRoutines.`)
 	}
-	routines[routinesIndex] = r
-	mapIndex[goid.Get()] = routinesIndex
-	routinesIndex++
+	routines[numberIndex] = r
+	mapIndex[goid.Get()] = numberIndex
+	numberIndex++
 	createRoutineLock.Unlock()
 	for i := 0; i < opts.maxDependencies; i++ {
 		dep := newDependency(nil, nil, 0)

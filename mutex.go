@@ -31,7 +31,6 @@ the lock and unlock operations for these locks.
 */
 
 import (
-	"fmt"
 	"runtime"
 	"sync"
 	"unsafe"
@@ -69,7 +68,7 @@ func NewLock() *Mutex {
 		isLockedRoutineIndex: -1,
 	}
 
-	// save the position of the save command
+	// save the position of the NewLock call
 	_, file, line, _ := runtime.Caller(1)
 	m.context = append(m.context, newInfo(file, line, true, ""))
 
@@ -118,9 +117,9 @@ func (m *Mutex) getIn() *bool {
 
 // getter for mu
 // Returns:
-//  (bool): true, false for RWMutex
+//  (bool): true, false for rw-mutex
 //  (*sync.Mutex): underlying sync.Mutex mu
-//  (*sync.RWMutex): nil, underlying sync.RWMutex mu for RWMutex
+//  (*sync.RWMutex): nil, underlying sync.RWMutex mu for rw-mutex
 func (m *Mutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
 	return true, m.mu, nil
 }
@@ -139,65 +138,16 @@ func (m *Mutex) getIsRead() *bool {
 // Returns:
 //  nil
 func (m *Mutex) Lock() {
-	// call the lock function with the mutex interface
+	// call the lock function with the mutexInt interface
 	lockInt(m, false)
 }
 
-// Trylock mutex m
+// TryLock mutex m
 //  Returns:
 //   (bool): true if locking was successful, false otherwise
 func (m *Mutex) TryLock() bool {
-	// panic if the lock was not initialized
-	if !*m.getIn() {
-		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
-			"x := NewLock()")
-		panic(errorMessage)
-	}
-
-	// initialize detector if necessary
-	if !initialized {
-		initialize()
-	}
-
-	// try to lock mu
-	d, l, t := m.getLock()
-	var res bool
-	if d {
-		res = l.TryLock()
-	} else {
-		res = t.TryLock()
-	}
-
-	// if locking was successful increase numberLocked
-	if res {
-		*m.getNumberLocked() += 1
-	}
-
-	// return if detection is disabled
-	if !opts.periodicDetection && !opts.comprehensiveDetection {
-		return res
-	}
-
-	// initialize routine if necessary
-	index := getRoutineIndex()
-	if index == -1 {
-		// create new routine, if not initialized
-		newRoutine()
-	}
-	index = getRoutineIndex()
-
-	r := &routines[index]
-
-	*m.getIsLockedRoutineIndex() = index
-
-	// update data structures if more than on routine is running
-	if runtime.NumGoroutine() > 1 {
-		if res {
-			(*r).updateTryLock(m)
-		}
-	}
-
-	return res
+	// call the try-lock method for the mutexInt interface
+	return tryLockInt(m, false)
 }
 
 // Unlock mutex m
