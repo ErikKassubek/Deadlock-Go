@@ -3,7 +3,7 @@
 ## What
 
 Deadlock-Go implements Mutex drop-in replacements for 
-sync.Mutex with Lock, TryLock and Unlock functionality and sync.RWLock with Lock and Unlock functionality to detect potential deadlocks.
+sync.Mutex and sync.Mutex with Lock, TryLock and Unlock functionality to detect potential deadlocks.
 
 Only works from Go Version 1.18.
 
@@ -29,7 +29,7 @@ func main() {
 		x.Lock()
 		y.Lock()
 		y.Unlock()
-		x.Unlock
+		x.Unlock()
 		ch <- true
 	}()
 
