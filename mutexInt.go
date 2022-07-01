@@ -46,7 +46,7 @@ type mutexInt interface {
 	getContext() *[]callerInfo
 	// getter for memoryPosition
 	getMemoryPosition() uintptr
-	// getter for in(itialized)
+	// getter for in (initialized)
 	getIn() *bool
 	// getter for mu
 	// 	if bool is true, *sync.Mutex was returned, *sync.RWMutex is nil

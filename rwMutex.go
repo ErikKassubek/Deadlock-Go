@@ -28,7 +28,7 @@ Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
 rwMutex.go
 This file implements the drop-in-replacement for the rw-locks (rw-mutexes) as
 well as
-the lock, rlock and unlock operations for these locks.
+the lock, r-lock and unlock operations for these locks.
 */
 
 import (
@@ -126,14 +126,14 @@ func (m *RWMutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
 
 // getter for isRead
 //  Returns:
-//   (*bool): true, if the last acquisition of the lock was rlock, false otherwise
+//   (*bool): true, if the last acquisition of the lock was r-lock, false otherwise
 func (m *RWMutex) getIsRead() *bool {
 	return &m.isRead
 }
 
 // ====== FUNCTIONS ============================================================
 
-// Lock rwmutex m
+// Lock rw-mutex m
 //  Returns:
 //   nil
 func (m *RWMutex) Lock() {
@@ -142,7 +142,7 @@ func (m *RWMutex) Lock() {
 	m.isRead = false
 }
 
-// RLock rwmutex m
+// RLock rw-mutex m
 //  Returns:
 //   nil
 func (m *RWMutex) RLock() {
@@ -167,7 +167,7 @@ func (m *RWMutex) TryLock() bool {
 //  Returns:
 //   (bool): true if locking was successful, false otherwise
 func (m *RWMutex) TryRLock() bool {
-	// call the trylock method for the mutexInt interface
+	// call the try-lock method for the mutexInt interface
 	res := tryLockInt(m, true)
 	if res {
 		m.isRead = false
@@ -175,7 +175,7 @@ func (m *RWMutex) TryRLock() bool {
 	return res
 }
 
-// Unlock rwmutex m
+// Unlock rw-mutex m
 func (m *RWMutex) Unlock() {
 	unlockInt(m)
 }

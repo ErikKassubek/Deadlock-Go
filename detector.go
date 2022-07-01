@@ -503,7 +503,7 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 }
 
 // checkRWCycle check if the cycle does lead to a deadlock even if it contains
-// rwlocks.
+// rw-locks.
 //  Args:
 //   stack (*depStack): stack representing the current chain
 //    bottom of the stack
@@ -512,7 +512,7 @@ func isCycleChain(stack *depStack, dep *dependency) bool {
 func checkRWCycle(stack *depStack) bool {
 	// traverse through the top two dependencies in the stack
 	for _, c := range []*stackElement{stack.top.prev, stack.top} {
-		// the path can only be invalid if the lock was acquired by rlock
+		// the path can only be invalid if the lock was acquired by r-lock
 		isRead := *c.depEntry.mu.getIsRead()
 		if !isRead {
 			continue

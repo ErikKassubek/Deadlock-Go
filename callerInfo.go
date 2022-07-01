@@ -45,7 +45,7 @@ type callerInfo struct {
 // newInfo creates and returns a new callerInfo
 //  Args:
 //   file (string): name of the file
-//   line (int): line in the file where the call happenedr
+//   line (int): line in the file where the call happened
 //   create (bool): set to true if the call was a lock creation or false, if it was a lock acquiring
 //  Returns:
 //   callerInfo: the created callerInfo
