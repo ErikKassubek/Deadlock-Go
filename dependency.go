@@ -56,7 +56,7 @@ func newDependency(lock mutexInt, currentLocks []mutexInt,
 	d := dependency{
 		mu:           lock,
 		holdingCount: numberOfLocks,
-		holdingSet:   make([]mutexInt, opts.maxHoldingDepth),
+		holdingSet:   make([]mutexInt, opts.maxNumberOfDependentLocks),
 	}
 
 	// copy currentLocks into d.holding set

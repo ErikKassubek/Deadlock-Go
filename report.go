@@ -32,6 +32,7 @@ the deadlock checks
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 )
 
@@ -43,76 +44,88 @@ const (
 )
 
 // report if double locking is detected
+//  Args:
+//   m (mutexInt): mutex on which double locking was detected
+//  Returns:
+//   nil
 func reportDeadlockDoubleLocking(m mutexInt) {
-	fmt.Printf(red, "DEADLOCK (DOUBLE LOCKING)\n\n")
+	fmt.Fprintf(os.Stderr, red, "DEADLOCK (DOUBLE LOCKING)\n\n")
 
 	// print information about the involved lock
-	fmt.Printf(yellow, "Initialization of lock involved in deadlock:\n\n")
+	fmt.Fprintf(os.Stderr, yellow, "Initialization of lock involved in deadlock:\n\n")
 	context := *m.getContext()
-	fmt.Println(context[0].file, context[0].line)
-	fmt.Println("")
-	fmt.Printf(yellow, "Calls of lock involved in deadlock:\n\n")
+	fmt.Fprintln(os.Stderr, context[0].file, context[0].line)
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintf(os.Stderr, yellow, "Calls of lock involved in deadlock:\n\n")
 	for i, call := range context {
 		if i == 0 {
 			continue
 		}
-		fmt.Println(call.file, call.line)
+		fmt.Fprintln(os.Stderr, call.file, call.line)
 	}
 	_, file, line, _ := runtime.Caller(3)
-	fmt.Println(file, line)
-	fmt.Print("\n\n")
+	fmt.Fprintln(os.Stderr, file, line)
+	fmt.Fprintf(os.Stderr, "\n\n")
 }
 
-//report a found deadlock
+// report a found deadlock
+//  Args:
+//   stack (*depStack) stack which represents the found cycle
+//  Returns:
+//   nil
 func reportDeadlock(stack *depStack) {
-	fmt.Printf(red, "POTENTIAL DEADLOCK\n\n")
+	fmt.Fprintf(os.Stderr, red, "POTENTIAL DEADLOCK\n\n")
 
 	// print information about the locks in the circle
-	fmt.Printf(yellow, "Initialization of locks involved in potential deadlock:\n\n")
+	fmt.Fprintf(os.Stderr, yellow, "Initialization of locks involved in potential deadlock:\n\n")
 	for cl := stack.stack.next; cl != nil; cl = cl.next {
 		for _, c := range *cl.depEntry.mu.getContext() {
 			if c.create {
-				fmt.Println(c.file, c.line)
+				fmt.Fprintln(os.Stderr, c.file, c.line)
 			}
 		}
 	}
 
+	// print information if call stacks were collected
 	if opts.collectCallStack {
-		fmt.Printf(yellow, "\nCallStacks of Locks involved in potential deadlock:\n\n")
+		fmt.Fprintf(os.Stderr, yellow, "\nCallStacks of Locks involved in potential deadlock:\n\n")
 		for cl := stack.stack.next; cl != nil; cl = cl.next {
 			cont := *cl.depEntry.mu.getContext()
-			fmt.Printf(blue, "CallStacks for lock created at: ")
-			fmt.Printf(blue, cont[0].file)
-			fmt.Printf(blue, ":")
-			fmt.Printf(blue, fmt.Sprint(cont[0].line))
-			fmt.Print("\n")
+			fmt.Fprintf(os.Stderr, blue, "CallStacks for lock created at: ")
+			fmt.Fprintf(os.Stderr, blue, cont[0].file)
+			fmt.Fprintf(os.Stderr, blue, ":")
+			fmt.Fprintf(os.Stderr, blue, fmt.Sprint(cont[0].line))
+			fmt.Fprintf(os.Stderr, "\n")
 			for i, c := range cont {
 				if i != 0 {
-					fmt.Println(c.callStacks)
+					fmt.Fprintln(os.Stderr, c.callStacks)
 				}
 			}
 		}
 	} else {
-		fmt.Printf(yellow, "\nCalls of locks involved in potential deadlock:\n\n")
+		// print information if only caller information were selected
+		fmt.Fprintf(os.Stderr, yellow, "\nCalls of locks involved in potential deadlock:\n\n")
 		for cl := stack.stack.next; cl != nil; cl = cl.next {
 			for i, c := range *cl.depEntry.mu.getContext() {
 				if i == 0 {
-					fmt.Printf(blue, "Calls for lock created at: ")
-					fmt.Printf(blue, c.file)
-					fmt.Printf(blue, ":")
-					fmt.Printf(blue, fmt.Sprint(c.line))
-					fmt.Printf("\n")
+					fmt.Fprintf(os.Stderr, blue, "Calls for lock created at: ")
+					fmt.Fprintf(os.Stderr, blue, c.file)
+					fmt.Fprintf(os.Stderr, blue, ":")
+					fmt.Fprintf(os.Stderr, blue, fmt.Sprint(c.line))
+					fmt.Fprintf(os.Stderr, "\n")
 				} else {
-					fmt.Println(c.file, c.line)
+					fmt.Fprintln(os.Stderr, c.file, c.line)
 				}
 			}
-			fmt.Println("")
+			fmt.Fprintln(os.Stderr, "")
 		}
 	}
-	fmt.Print("\n\n")
+	fmt.Fprintf(os.Stderr, "\n\n")
 }
 
 // print a message, that the program was terminated because of a detected local deadlock
+// Returns:
+//  nil
 func reportDeadlockPeriodical() {
-	fmt.Printf(red, "THE PROGRAM WAS TERMINATED BECAUSE IT DETECTED A LOCAL DEADLOCK\n\n")
+	fmt.Fprintf(os.Stderr, red, "THE PROGRAM WAS TERMINATED BECAUSE IT DETECTED A LOCAL DEADLOCK\n\n")
 }

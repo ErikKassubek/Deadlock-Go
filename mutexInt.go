@@ -166,21 +166,21 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 		return res
 	}
 
-	// initialize routine if necessary
-	index := getRoutineIndex()
-	if index == -1 {
-		// create new routine, if not initialized
-		newRoutine()
-	}
-	index = getRoutineIndex()
-
-	r := &routines[index]
-
-	*m.getIsLockedRoutineIndex() = index
-
-	// update data structures if more than on routine is running
+	// update data structures if more than on routine is running and locking
+	// was successful
 	if runtime.NumGoroutine() > 1 {
 		if res {
+			// initialize routine if necessary
+			index := getRoutineIndex()
+			if index == -1 {
+				// create new routine, if not initialized
+				newRoutine()
+			}
+			index = getRoutineIndex()
+			r := &routines[index]
+
+			*m.getIsLockedRoutineIndex() = index
+
 			(*r).updateTryLock(m)
 		}
 	}

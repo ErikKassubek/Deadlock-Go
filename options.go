@@ -54,8 +54,8 @@ var opts = struct {
 	checkDoubleLocking bool
 	// maximum number of dependencies
 	maxDependencies int
-	// The maximum depth of a nested lock tree
-	maxHoldingDepth int
+	// The maximum number of locks a lock can depend on
+	maxNumberOfDependentLocks int
 	// The maximum number of routines
 	maxRoutines int
 	// The maximum byte size for callStacks
@@ -68,15 +68,17 @@ var opts = struct {
 	collectSingleLevelLockStack: true,
 	checkDoubleLocking:          true,
 	maxDependencies:             4096,
-	maxHoldingDepth:             128,
+	maxNumberOfDependentLocks:   128,
 	maxRoutines:                 1024,
 	maxCallStackSize:            2048,
 }
 
 // Enable or disable periodic detection
-// Return true if detection was successful
-// Return false if setting was unsuccessful
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   enable (bool): true to enable, false to disable
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetPeriodicDetection(enable bool) bool {
 	if initialized {
 		return false
@@ -86,9 +88,11 @@ func SetPeriodicDetection(enable bool) bool {
 }
 
 // Enable or disable comprehensive detection
-// Return true if detection was successful
-// Return false if setting was unsuccessful
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   enable (bool): true to enable, false to disable
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetComprehensiveDetection(enable bool) bool {
 	if initialized {
 		return false
@@ -97,10 +101,12 @@ func SetComprehensiveDetection(enable bool) bool {
 	return true
 }
 
-// Set the periodic detection time in second
-// Return true if detection was successful
-// Return false if setting was unsuccessful
+// Set the temporal distance between the periodic detections
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   seconds (int): temporal distance in seconds
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetPeriodicDetectionTime(seconds int) bool {
 	if initialized {
 		return false
@@ -111,9 +117,11 @@ func SetPeriodicDetectionTime(seconds int) bool {
 
 // Enable or disable collection of full call stacks
 // If it is disabled only file and line numbers are collected
-// Return true if detection was successful
-// Return false if setting was unsuccessful
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   enable (bool): true to enable, false to disable
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetCollectCallStack(enable bool) bool {
 	if initialized {
 		return false
@@ -123,10 +131,12 @@ func SetCollectCallStack(enable bool) bool {
 }
 
 // Enable or disable collection of call information for single level locks
-// If it is disabled only file and line numbers are collected
-// Return true if detection was successful
-// Return false if setting was unsuccessful
+// If it is disabled no caller information about single level locks will be collected.
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   enable (bool): true to enable, false to disable
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetCollectSingleLevelLockInformation(enable bool) bool {
 	if initialized {
 		return false
@@ -136,9 +146,11 @@ func SetCollectSingleLevelLockInformation(enable bool) bool {
 }
 
 // Enable or disable checks for double locking
-// Return true if detection was successful
-// Return false if setting was unsuccessful
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   enable (bool): true to enable, false to disable
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetDoubleLockingDetection(enable bool) bool {
 	if initialized {
 		return false
@@ -148,10 +160,11 @@ func SetDoubleLockingDetection(enable bool) bool {
 }
 
 // Set the max number of dependencies
-// If it is disabled only file and line numbers are collected
-// Return true if detection was successful
-// Return false if setting was unsuccessful
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   number (int): max number of dependencies
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetMaxDependencies(number int) bool {
 	if initialized {
 		return false
@@ -160,24 +173,26 @@ func SetMaxDependencies(number int) bool {
 	return true
 }
 
-// Set the max depth of a nested lock tree
-// If it is disabled only file and line numbers are collected
-// Return true if detection was successful
-// Return false if setting was unsuccessful
+// Set the max number of locks a lock can depend on
 // It is not possible to set options after the detector was initialized
-func SetMaxHoldingDepth(number int) bool {
+//  Args:
+//   number (int): max number of locks a lock can depend on
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
+func SetMaxNumberOfDependentLocks(number int) bool {
 	if initialized {
 		return false
 	}
-	opts.maxHoldingDepth = number
+	opts.maxNumberOfDependentLocks = number
 	return true
 }
 
 // Set the max number of routines
-// If it is disabled only file and line numbers are collected
-// Return true if detection was successful
-// Return false if setting was unsuccessful
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   number (int): max number of routines
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetMaxRoutines(number int) bool {
 	if initialized {
 		return false
@@ -187,10 +202,11 @@ func SetMaxRoutines(number int) bool {
 }
 
 // Set the max size of collected call stacks
-// If it is disabled only file and line numbers are collected
-// Return true if detection was successful
-// Return false if setting was unsuccessful
 // It is not possible to set options after the detector was initialized
+//  Args:
+//   number (int): max size of the call stack in bytes
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
 func SetMaxCallStackSize(number int) bool {
 	if initialized {
 		return false
