@@ -189,10 +189,10 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 }
 
 // unlock the mutex or rw-mutex and update the detector data
-// Args:
-//  m (mutexInt): mutex or RWMutex to unlock
-// Returns:
-//  nil
+//  Args:
+//   m (mutexInt): mutex or RWMutex to unlock
+//  Returns:
+//   nil
 func unlockInt(m mutexInt) {
 	// panic if the lock was not initialized
 	if !*m.getIn() {

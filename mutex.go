@@ -56,6 +56,8 @@ type Mutex struct {
 
 // create and return a new lock, which can be used as a drop-in replacement for
 // sync.Mutex
+//  Returns:
+//   (*Mutex): the created lock
 func NewLock() *Mutex {
 	// initialize detector if necessary
 	if !initialized {
@@ -102,8 +104,8 @@ func (m *Mutex) getContext() *[]callerInfo {
 }
 
 // getter for memoryPosition
-// Returns:
-//  (uintptr): memoryPosition
+//  Returns:
+//   (uintptr): memoryPosition
 func (m *Mutex) getMemoryPosition() uintptr {
 	return m.memoryPosition
 }
@@ -116,10 +118,10 @@ func (m *Mutex) getIn() *bool {
 }
 
 // getter for mu
-// Returns:
-//  (bool): true, false for rw-mutex
-//  (*sync.Mutex): underlying sync.Mutex mu
-//  (*sync.RWMutex): nil, underlying sync.RWMutex mu for rw-mutex
+//  Returns:
+//   (bool): true, false for rw-mutex
+//   (*sync.Mutex): underlying sync.Mutex mu
+//   (*sync.RWMutex): nil, underlying sync.RWMutex mu for rw-mutex
 func (m *Mutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
 	return true, m.mu, nil
 }
@@ -135,8 +137,8 @@ func (m *Mutex) getIsRead() *bool {
 // ============ FUNCTIONS ============
 
 // Lock mutex m
-// Returns:
-//  nil
+//  Returns:
+//   nil
 func (m *Mutex) Lock() {
 	// call the lock function with the mutexInt interface
 	lockInt(m, false)

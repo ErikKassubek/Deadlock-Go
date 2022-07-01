@@ -47,11 +47,11 @@ type stackElement struct {
 }
 
 // create a new chainList
-// Args:
-//  dep (*dependency): dependency which is represented by the stack element
-//  i (int): index of the routine which created dep
-// Returns:
-//  (stackElement): element for the stack
+//  Args:
+//   dep (*dependency): dependency which is represented by the stack element
+//   i (int): index of the routine which created dep
+//  Returns:
+//   (stackElement): element for the stack
 func newStackElement(dep *dependency, i int) stackElement {
 	return stackElement{
 		depEntry: dep,
@@ -72,8 +72,8 @@ type depStack struct {
 }
 
 // create a new stack
-// Returns:
-//  (depStack): the dependency stack
+//  Returns:
+//   (depStack): the dependency stack
 func newDepStack() depStack {
 	cl := newStackElement(nil, -1)
 
@@ -89,11 +89,11 @@ func newDepStack() depStack {
 }
 
 // push a new dependency to the stack
-// Args:
-//  dep (*dependency): dependency to put on the stack
-//  index (int): index of the routine which created the dependency
-// Returns:
-//  nil
+//  Args:
+//   dep (*dependency): dependency to put on the stack
+//   index (int): index of the routine which created the dependency
+//  Returns:
+//   nil
 func (s *depStack) push(dep *dependency, index int) {
 	// create the new element
 	cl := newStackElement(dep, index)
@@ -105,6 +105,8 @@ func (s *depStack) push(dep *dependency, index int) {
 }
 
 // remove the top element from stack
+//  Returns:
+//   nil
 func (s *depStack) pop() {
 	// do nothing if the stack is empty (has only on empty default element)
 	if s.top == s.stack {

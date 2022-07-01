@@ -55,7 +55,7 @@ type RWMutex struct {
 	isRead bool // set true, if last acquisition was RLock
 }
 
-// create Lock
+// create a new rw-lock
 func NewRWLock() *RWMutex {
 	// initialize detector if necessary
 	if !initialized {
@@ -81,14 +81,14 @@ func NewRWLock() *RWMutex {
 // ====== GETTER ===============================================================
 
 // getter for isLocked
-// 	Returns:
+//  Returns:
 //   (*int): numberLocked
 func (m *RWMutex) getNumberLocked() *int {
 	return &m.numberLocked
 }
 
 // getter for isLockedRoutineIndex
-// 	Returns:
+//  Returns:
 //   (*int): isLockedRoutineIndex
 func (m *RWMutex) getIsLockedRoutineIndex() *int {
 	return &m.isLockedRoutineIndex
@@ -102,8 +102,8 @@ func (m *RWMutex) getContext() *[]callerInfo {
 }
 
 // getter for memoryPosition
-// Returns:
-//  (uintptr): memoryPosition
+//  Returns:
+//   (uintptr): memoryPosition
 func (m *RWMutex) getMemoryPosition() uintptr {
 	return m.memoryPosition
 }
@@ -116,10 +116,10 @@ func (m *RWMutex) getIn() *bool {
 }
 
 // getter for mu
-// Returns:
-//  (bool): false, true for mutex
-//  (*sync.Mutex): nil, underlying sync.Mutex mu for mutex
-//  (*sync.RWMutex): nil, underlying sync.RWMutex mu
+//  Returns:
+//   (bool): false, true for mutex
+//   (*sync.Mutex): nil, underlying sync.Mutex mu for mutex
+//   (*sync.RWMutex): nil, underlying sync.RWMutex mu
 func (m *RWMutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
 	return false, nil, m.mu
 }
@@ -134,8 +134,8 @@ func (m *RWMutex) getIsRead() *bool {
 // ====== FUNCTIONS ============================================================
 
 // Lock rwmutex m
-// Returns:
-//  nil
+//  Returns:
+//   nil
 func (m *RWMutex) Lock() {
 	// call the lock method for the mutexInt interface
 	lockInt(m, false)
@@ -143,8 +143,8 @@ func (m *RWMutex) Lock() {
 }
 
 // RLock rwmutex m
-// Returns:
-//  nil
+//  Returns:
+//   nil
 func (m *RWMutex) RLock() {
 	// call the try-lock method for the mutexInt interface
 	lockInt(m, true)
@@ -152,8 +152,8 @@ func (m *RWMutex) RLock() {
 }
 
 // TryLock rw-mutex m
-// Returns:
-//  (bool): true if locking was successful, false otherwise
+//  Returns:
+//   (bool): true if locking was successful, false otherwise
 func (m *RWMutex) TryLock() bool {
 	// call the try-lock method for the mutexInt interface
 	res := tryLockInt(m, false)
@@ -164,8 +164,8 @@ func (m *RWMutex) TryLock() bool {
 }
 
 // TryRLock rw-mutex m
-// Returns:
-//  (bool): true if locking was successful, false otherwise
+//  Returns:
+//   (bool): true if locking was successful, false otherwise
 func (m *RWMutex) TryRLock() bool {
 	// call the trylock method for the mutexInt interface
 	res := tryLockInt(m, true)
