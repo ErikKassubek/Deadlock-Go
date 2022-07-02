@@ -340,10 +340,8 @@ func getRoutineIndex() int {
 //  Returns:
 //   nil
 func (r *routine) checkDoubleLocking(m mutexInt, routineIndex int, rLock bool) {
-	// it can only be double locking, if the routine which last locked the
-	// mutex without releasing it is equal to the routine which tries to lock the
-	// mutex. If the mutex is currently not locked, its isLockedRoutineIndex is -1
-	if *(m.getIsLockedRoutineIndex()) != routineIndex {
+	// it can only be double locking, if the routine already holds the lock
+	if (*m.getIsLockedRoutineIndex())[routineIndex] == 0 {
 		return
 	}
 

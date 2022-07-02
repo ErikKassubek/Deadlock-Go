@@ -49,7 +49,7 @@ type Mutex struct {
 	// numberLocked stores how often the mutex is currently locked
 	numberLocked int
 	// index of the routine, which holds the lock
-	isLockedRoutineIndex int
+	isLockedRoutineIndex map[int]int
 	// position of the mutex in memory
 	memoryPosition uintptr
 }
@@ -67,7 +67,7 @@ func NewLock() *Mutex {
 	m := Mutex{
 		mu:                   &sync.Mutex{},
 		in:                   true,
-		isLockedRoutineIndex: -1,
+		isLockedRoutineIndex: map[int]int{},
 	}
 
 	// save the position of the NewLock call
@@ -92,7 +92,7 @@ func (m *Mutex) getNumberLocked() *int {
 // getter for isLockedRoutineIndex
 //  Returns:
 //   (*int): isLockedRoutineIndex
-func (m *Mutex) getIsLockedRoutineIndex() *int {
+func (m *Mutex) getIsLockedRoutineIndex() *map[int]int {
 	return &m.isLockedRoutineIndex
 }
 

@@ -47,8 +47,8 @@ type RWMutex struct {
 	in bool
 	// how ofter is the lock locked
 	numberLocked int
-	// index of the routine, which holds the lock
-	isLockedRoutineIndex int
+	// indexes of the routines, which holds the lock
+	isLockedRoutineIndex map[int]int
 	// position of the mutex in memory
 	memoryPosition uintptr
 	// set true, if last acquisition was RLock
@@ -65,7 +65,7 @@ func NewRWLock() *RWMutex {
 	m := RWMutex{
 		mu:                   &sync.RWMutex{},
 		in:                   true,
-		isLockedRoutineIndex: -1,
+		isLockedRoutineIndex: map[int]int{},
 	}
 
 	// save the position of the NewLock call
@@ -90,7 +90,7 @@ func (m *RWMutex) getNumberLocked() *int {
 // getter for isLockedRoutineIndex
 //  Returns:
 //   (*int): isLockedRoutineIndex
-func (m *RWMutex) getIsLockedRoutineIndex() *int {
+func (m *RWMutex) getIsLockedRoutineIndex() *map[int]int {
 	return &m.isLockedRoutineIndex
 }
 

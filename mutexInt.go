@@ -41,7 +41,7 @@ type mutexInt interface {
 	// getter for isLocked
 	getNumberLocked() *int
 	// getter for isLockedRoutineIndex
-	getIsLockedRoutineIndex() *int
+	getIsLockedRoutineIndex() *map[int]int
 	// getter for context
 	getContext() *[]callerInfo
 	// getter for memoryPosition
@@ -112,7 +112,7 @@ func lockInt(m mutexInt, rLock bool) {
 		r.checkDoubleLocking(m, index, rLock)
 	}
 
-	*m.getIsLockedRoutineIndex() = index
+	(*m.getIsLockedRoutineIndex())[index] += 1
 
 	// update data structures if more than on routine is running
 	numRoutine := runtime.NumGoroutine()
@@ -179,7 +179,7 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 			index = getRoutineIndex()
 			r := &routines[index]
 
-			*m.getIsLockedRoutineIndex() = index
+			(*m.getIsLockedRoutineIndex())[index] += 1
 
 			(*r).updateTryLock(m)
 		}
@@ -225,9 +225,7 @@ func unlockInt(m mutexInt) {
 
 		// update numberLocked and isLockedRoutineIndex
 		*m.getNumberLocked() -= 1
-		if *m.getNumberLocked() == 0 {
-			*m.getIsLockedRoutineIndex() = -1
-		}
+		(*m.getIsLockedRoutineIndex())[getRoutineIndex()] -= 1
 	}()
 
 	// return if detection is disabled
