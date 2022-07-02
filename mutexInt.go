@@ -70,11 +70,6 @@ func lockInt(m mutexInt, rLock bool) {
 		panic(errorMessage)
 	}
 
-	// initialize detector if necessary
-	if !initialized {
-		initialize()
-	}
-
 	// defer the actual locking
 	defer func() {
 		d, l, t := m.getLock()
@@ -134,11 +129,6 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
 			"x := NewLock()")
 		panic(errorMessage)
-	}
-
-	// initialize detector if necessary
-	if !initialized {
-		initialize()
 	}
 
 	// try to lock mu
