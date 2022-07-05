@@ -133,6 +133,11 @@ the periodical detection is started, default: 2s
 creation and acquisitions are collected. Otherwise only file and line 
 information is collected, default: disabled
 
-```SetCollectSingleLevelLockInformation```: if enabled, information about single-level locks are collected, default enabled
+```SetCollectSingleLevelLockInformation(enable bool)```: if enabled, information about single-level locks are collected, default enabled
 
 ```SetDoubleLockingDetection(enable bool)```: if enabled, detection of double locking is active, default: enabled
+
+Additionally the maximum numbers for the dependencies per Routine (default: 4096),
+the maximum number of mutexes a mutex can depend on (default: 128), 
+the maximum number of routines (default: 1024) and the maximum 
+length of a collected call stack in bytes (default 2048) can be set.  

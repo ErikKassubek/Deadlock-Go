@@ -95,10 +95,10 @@ func reportDeadlock(stack *depStack) {
 			fmt.Fprintf(os.Stderr, blue, cont[0].file)
 			fmt.Fprintf(os.Stderr, blue, ":")
 			fmt.Fprintf(os.Stderr, blue, fmt.Sprint(cont[0].line))
-			fmt.Fprintf(os.Stderr, "\n")
+			fmt.Fprintf(os.Stderr, "\n\n")
 			for i, c := range cont {
 				if i != 0 {
-					fmt.Fprintln(os.Stderr, c.callStacks)
+					fmt.Fprint(os.Stderr, c.callStacks)
 				}
 			}
 		}
