@@ -38,7 +38,7 @@ import (
 
 // colors for deadlock messages
 const (
-	yellow = "\033[1;33m%s\033[0m"
+	purple = "\033[1;35m%s\033[0m"
 	red    = "\033[1;31m%s\033[0m"
 	blue   = "\033[0;36m%s\033[0m"
 )
@@ -52,11 +52,11 @@ func reportDeadlockDoubleLocking(m mutexInt) {
 	fmt.Fprintf(os.Stderr, red, "DEADLOCK (DOUBLE LOCKING)\n\n")
 
 	// print information about the involved lock
-	fmt.Fprintf(os.Stderr, yellow, "Initialization of lock involved in deadlock:\n\n")
+	fmt.Fprintf(os.Stderr, purple, "Initialization of lock involved in deadlock:\n\n")
 	context := *m.getContext()
 	fmt.Fprintln(os.Stderr, context[0].file, context[0].line)
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintf(os.Stderr, yellow, "Calls of lock involved in deadlock:\n\n")
+	fmt.Fprintf(os.Stderr, purple, "Calls of lock involved in deadlock:\n\n")
 	for i, call := range context {
 		if i == 0 {
 			continue
@@ -77,7 +77,7 @@ func reportDeadlock(stack *depStack) {
 	fmt.Fprintf(os.Stderr, red, "POTENTIAL DEADLOCK\n\n")
 
 	// print information about the locks in the circle
-	fmt.Fprintf(os.Stderr, yellow, "Initialization of locks involved in potential deadlock:\n\n")
+	fmt.Fprintf(os.Stderr, purple, "Initialization of locks involved in potential deadlock:\n\n")
 	for cl := stack.stack.next; cl != nil; cl = cl.next {
 		for _, c := range *cl.depEntry.mu.getContext() {
 			if c.create {
@@ -88,7 +88,7 @@ func reportDeadlock(stack *depStack) {
 
 	// print information if call stacks were collected
 	if opts.collectCallStack {
-		fmt.Fprintf(os.Stderr, yellow, "\nCallStacks of Locks involved in potential deadlock:\n\n")
+		fmt.Fprintf(os.Stderr, purple, "\nCallStacks of Locks involved in potential deadlock:\n\n")
 		for cl := stack.stack.next; cl != nil; cl = cl.next {
 			cont := *cl.depEntry.mu.getContext()
 			fmt.Fprintf(os.Stderr, blue, "CallStacks for lock created at: ")
@@ -104,7 +104,7 @@ func reportDeadlock(stack *depStack) {
 		}
 	} else {
 		// print information if only caller information were selected
-		fmt.Fprintf(os.Stderr, yellow, "\nCalls of locks involved in potential deadlock:\n\n")
+		fmt.Fprintf(os.Stderr, purple, "\nCalls of locks involved in potential deadlock:\n\n")
 		for cl := stack.stack.next; cl != nil; cl = cl.next {
 			for i, c := range *cl.depEntry.mu.getContext() {
 				if i == 0 {

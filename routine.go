@@ -50,7 +50,7 @@ var createRoutineLock sync.Mutex
 var routines = make([]routine, opts.maxRoutines)
 
 // number of routines in routines
-var numberIndex = 0
+var numberRoutines = 0
 
 // type to implement structures for lock logging
 type routine struct {
@@ -86,7 +86,7 @@ func newRoutine() {
 
 	// create the routine
 	r := routine{
-		index:                     numberIndex,
+		index:                     numberRoutines,
 		holdingCount:              0,
 		holdingSet:                make([]mutexInt, opts.maxNumberOfDependentLocks),
 		dependencyMap:             make(map[uintptr]*[]*dependency),
@@ -98,19 +98,19 @@ func newRoutine() {
 
 	// the routine list can only contain a fixed amount of routines
 	// panic if it already full
-	if numberIndex >= opts.maxRoutines {
+	if numberRoutines >= opts.maxRoutines {
 		panic(`Number of routines is greater than max number of routines. 
 			Increase Opts.MaxRoutines.`)
 	}
 
 	// set the routine
-	routines[numberIndex] = r
+	routines[numberRoutines] = r
 
 	// save the link from internal go id to index of routine
-	mapIndex[goid.Get()] = numberIndex
+	mapIndex[goid.Get()] = numberRoutines
 
 	// increase number of routines in routine
-	numberIndex++
+	numberRoutines++
 
 	// release list lock
 	createRoutineLock.Unlock()
@@ -224,7 +224,7 @@ func (r *routine) updateLock(m mutexInt) {
 			bufString = string(buf[:n])
 			bufStringSplit := strings.Split(bufString, "\n")
 			bufStringCleaned = bufStringSplit[0] + "\n"
-			for i := 5; i < len(bufStringSplit); i++ {
+			for i := 7; i < len(bufStringSplit); i++ {
 				bufStringCleaned += bufStringSplit[i] + "\n"
 			}
 		}

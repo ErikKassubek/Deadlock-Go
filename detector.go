@@ -63,7 +63,7 @@ func FindPotentialDeadlocks() {
 
 	// only run detector if at least two routines were running during the
 	// execution of the program
-	if numberIndex > 1 {
+	if numberRoutines > 1 {
 		// abort check if the lock trees contain less than 2 unique dependencies
 		if !isNumberDependenciesGreaterEqualTwo() {
 			return
@@ -91,7 +91,7 @@ func isNumberDependenciesGreaterEqualTwo() bool {
 	dependencyMap := make(map[string]struct{})
 
 	// parse all routines
-	for i := 0; i < numberIndex; i++ {
+	for i := 0; i < numberRoutines; i++ {
 		current := routines[i]
 
 		// parse routine i
@@ -154,10 +154,10 @@ func detect() {
 	// of the search.
 	// They can also be temporarily ignored, if a dependency of this routine
 	// is already in the path which is currently explored
-	isTraversed := make([]bool, numberIndex)
+	isTraversed := make([]bool, numberRoutines)
 
 	// traverse all routines as starting routine for the loop search
-	for i := 0; i < numberIndex; i++ {
+	for i := 0; i < numberRoutines; i++ {
 		routine := routines[i]
 
 		visiting = i
@@ -196,7 +196,7 @@ func dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 	// Traverse through all routines to find the potential next step in the path.
 	// Routines with index <= visiting have already been used as starting routine
 	// and therefore don't have to been considered again.
-	for i := visiting + 1; i < numberIndex; i++ {
+	for i := visiting + 1; i < numberRoutines; i++ {
 		routine := routines[i]
 
 		// continue if the routine has already been traversed
@@ -311,7 +311,7 @@ func detectionPeriodical(lastHolding *[]mutexInt) {
 	// traverse all routines as starting routine
 	for index, r := range routines {
 		// routines with an index >= routinesIndex have not been used in the program
-		if index >= numberIndex {
+		if index >= numberRoutines {
 			break
 		}
 
@@ -350,7 +350,7 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 	// Traverse through all routines to find the potential next step in the path.
 	// Routines with index <= visiting have already been used as starting routine
 	// and therefore don't have to been considered again.
-	for i := visiting + 1; i < numberIndex; i++ {
+	for i := visiting + 1; i < numberRoutines; i++ {
 		r := routines[i]
 
 		// continue if the routine has no current dependency or has already be traversed
@@ -403,13 +403,13 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 		} else {
 			// if the chain is not a cycle, the dependency is added to the current
 			// path and the search is continued recursively
-			isTraversed[numberIndex] = true
-			stack.push(dep, numberIndex)
+			isTraversed[numberRoutines] = true
+			stack.push(dep, numberRoutines)
 			dfsPeriodical(stack, visiting, isTraversed, lastHolding)
 
 			// if no cycle has been found with dep, it is removed from the path
 			stack.pop()
-			isTraversed[numberIndex] = false
+			isTraversed[numberRoutines] = false
 		}
 	}
 }
@@ -451,7 +451,6 @@ func isChain(stack *depStack, dep *dependency) bool {
 				lockInDepHoldingSet := dep.holdingSet[j]
 
 				if lockInStackHoldingSet == lockInDepHoldingSet {
-
 					// this does not lead to a disqualification of the path if both of
 					// the locks are RLock
 					if !(*lockInStackHoldingSet.getIsRead() && *lockInDepHoldingSet.getIsRead()) {

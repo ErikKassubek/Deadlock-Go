@@ -147,8 +147,18 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 	}
 
 	// if locking was successful increase numberLocked
+	var index int
 	if res {
+		// initialize routine if necessary
+		index := getRoutineIndex()
+		if index == -1 {
+			// create new routine, if not initialized
+			newRoutine()
+		}
+		index = getRoutineIndex()
+
 		*m.getNumberLocked() += 1
+		(*m.getIsLockedRoutineIndex())[index] += 1
 	}
 
 	// return if detection is disabled
@@ -160,17 +170,7 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 	// was successful
 	if runtime.NumGoroutine() > 1 {
 		if res {
-			// initialize routine if necessary
-			index := getRoutineIndex()
-			if index == -1 {
-				// create new routine, if not initialized
-				newRoutine()
-			}
-			index = getRoutineIndex()
 			r := &routines[index]
-
-			(*m.getIsLockedRoutineIndex())[index] += 1
-
 			(*r).updateTryLock(m)
 		}
 	}
