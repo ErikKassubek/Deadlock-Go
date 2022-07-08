@@ -42,6 +42,8 @@ type mutexInt interface {
 	getNumberLocked() *int
 	// getter for isLockedRoutineIndex
 	getIsLockedRoutineIndex() *map[int]int
+	// getter for isLockedRoutineIndexLock
+	getIsLockedRoutineIndexLock() *sync.Mutex
 	// getter for context
 	getContext() *[]callerInfo
 	// getter for memoryPosition
@@ -200,22 +202,11 @@ func unlockInt(m mutexInt) {
 
 	// defer the actual unlocking
 	defer func() {
-		d, l, r := m.getLock()
-		if d {
-			// unlock if m is mutex
-			l.Unlock()
-		} else {
-			// unlock if m is rw-mutex
-			if *m.getIsRead() {
-				r.RUnlock()
-			} else {
-				r.Unlock()
-			}
-		}
-
 		// update numberLocked and isLockedRoutineIndex
 		*m.getNumberLocked() -= 1
+		m.getIsLockedRoutineIndexLock().Lock()
 		(*m.getIsLockedRoutineIndex())[getRoutineIndex()] -= 1
+		m.getIsLockedRoutineIndexLock().Unlock()
 	}()
 
 	// return if detection is disabled

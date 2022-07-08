@@ -50,6 +50,8 @@ type Mutex struct {
 	numberLocked int
 	// index of the routine, which holds the lock
 	isLockedRoutineIndex map[int]int
+	// lock to prevent multiple concurrent writes to isLockedRoutineIndex
+	isLockedRoutineIndexLock *sync.Mutex
 	// position of the mutex in memory
 	memoryPosition uintptr
 }
@@ -65,9 +67,10 @@ func NewLock() *Mutex {
 	}
 
 	m := Mutex{
-		mu:                   &sync.Mutex{},
-		in:                   true,
-		isLockedRoutineIndex: map[int]int{},
+		mu:                       &sync.Mutex{},
+		in:                       true,
+		isLockedRoutineIndex:     map[int]int{},
+		isLockedRoutineIndexLock: &sync.Mutex{},
 	}
 
 	// save the position of the NewLock call
@@ -94,6 +97,13 @@ func (m *Mutex) getNumberLocked() *int {
 //   (*int): isLockedRoutineIndex
 func (m *Mutex) getIsLockedRoutineIndex() *map[int]int {
 	return &m.isLockedRoutineIndex
+}
+
+// getter for isLockedRoutineIndexLock
+//  Returns:
+//   (*sync.RWMutex): isLockedRisLockedRoutineIndexLockoutineIndex
+func (m *Mutex) getIsLockedRoutineIndexLock() *sync.Mutex {
+	return m.isLockedRoutineIndexLock
 }
 
 // getter for context
@@ -158,4 +168,5 @@ func (m *Mutex) TryLock() bool {
 func (m *Mutex) Unlock() {
 	// call the unlock method for the mutexInt interface
 	unlockInt(m)
+	m.mu.Unlock()
 }

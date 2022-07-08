@@ -49,6 +49,8 @@ type RWMutex struct {
 	numberLocked int
 	// indexes of the routines, which holds the lock
 	isLockedRoutineIndex map[int]int
+	// lock to prevent multiple concurrent writes to isLockedRoutineIndex
+	isLockedRoutineIndexLock *sync.Mutex
 	// position of the mutex in memory
 	memoryPosition uintptr
 	// set true, if last acquisition was RLock
@@ -63,9 +65,10 @@ func NewRWLock() *RWMutex {
 	}
 
 	m := RWMutex{
-		mu:                   &sync.RWMutex{},
-		in:                   true,
-		isLockedRoutineIndex: map[int]int{},
+		mu:                       &sync.RWMutex{},
+		in:                       true,
+		isLockedRoutineIndex:     map[int]int{},
+		isLockedRoutineIndexLock: &sync.Mutex{},
 	}
 
 	// save the position of the NewLock call
@@ -92,6 +95,13 @@ func (m *RWMutex) getNumberLocked() *int {
 //   (*int): isLockedRoutineIndex
 func (m *RWMutex) getIsLockedRoutineIndex() *map[int]int {
 	return &m.isLockedRoutineIndex
+}
+
+// getter for isLockedRoutineIndexLock
+//  Returns:
+//   (*int): isLockedRoutineIndex
+func (m *RWMutex) getIsLockedRoutineIndexLock() *sync.Mutex {
+	return m.isLockedRoutineIndexLock
 }
 
 // getter for context
@@ -178,4 +188,11 @@ func (m *RWMutex) TryRLock() bool {
 // Unlock rw-mutex m
 func (m *RWMutex) Unlock() {
 	unlockInt(m)
+	m.mu.Unlock()
+}
+
+// RUnlock rw-mutex m
+func (m *RWMutex) RUnlock() {
+	unlockInt(m)
+	m.mu.RUnlock()
 }
