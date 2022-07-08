@@ -109,7 +109,9 @@ func lockInt(m mutexInt, rLock bool) {
 		r.checkDoubleLocking(m, index, rLock)
 	}
 
+	m.getIsLockedRoutineIndexLock().Lock()
 	(*m.getIsLockedRoutineIndex())[index] += 1
+	m.getIsLockedRoutineIndexLock().Unlock()
 
 	// update data structures if more than on routine is running
 	numRoutine := runtime.NumGoroutine()
@@ -160,7 +162,9 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 		index = getRoutineIndex()
 
 		*m.getNumberLocked() += 1
+		m.getIsLockedRoutineIndexLock().Lock()
 		(*m.getIsLockedRoutineIndex())[index] += 1
+		m.getIsLockedRoutineIndexLock().Unlock()
 	}
 
 	// return if detection is disabled
