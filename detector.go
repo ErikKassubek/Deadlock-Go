@@ -431,6 +431,22 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 //  Returns:
 //   (bool): true if dep can be added to the current path, false otherwise
 func isChain(stack *depStack, dep *dependency) bool {
+	// adding dep to the current path is valid, if the lock mu of the top element
+	// in the stack (the last dependency in the current path) is in the holding set
+	// of dep
+	exists := false
+	for i := 0; i < dep.holdingCount; i++ {
+		if stack.top.depEntry.mu == dep.holdingSet[i] {
+			exists = true
+			if *dep.holdingSet[i].getIsRead() && *stack.top.depEntry.mu.getIsRead() {
+				return false
+			}
+		}
+		if !exists {
+			return false
+		}
+	}
+
 	// traverse all dependencies in the current path
 	for cl := stack.stack.next; cl != nil; cl = cl.next {
 		// a path cannot have the same dependency multiple times
@@ -453,7 +469,7 @@ func isChain(stack *depStack, dep *dependency) bool {
 				if lockInStackHoldingSet == lockInDepHoldingSet {
 					// this does not lead to a disqualification of the path if both of
 					// the locks are RLock
-					if !(*lockInStackHoldingSet.getIsRead() && *lockInDepHoldingSet.getIsRead()) {
+					if !(*lockInStackHoldingSet.getIsRead() || *lockInDepHoldingSet.getIsRead()) {
 						return false
 					}
 				}
@@ -461,16 +477,7 @@ func isChain(stack *depStack, dep *dependency) bool {
 		}
 	}
 
-	// adding dep to the current path is valid, if the lock mu of the top element
-	// in the stack (the last dependency in the current path) is in the holding set
-	// of dep
-	for i := 0; i < dep.holdingCount; i++ {
-		if stack.top.depEntry.mu == dep.holdingSet[i] {
-			return true
-		}
-	}
-
-	return false
+	return true
 }
 
 // isCycleCain checks if adding a dependency dep to the current path represented
@@ -492,48 +499,11 @@ func isChain(stack *depStack, dep *dependency) bool {
 func isCycleChain(dStack *depStack, dep *dependency) bool {
 	for i := 0; i < dStack.stack.next.depEntry.holdingCount; i++ {
 		if dStack.stack.next.depEntry.holdingSet[i] == dep.mu {
-			dStack.push(dep, -1)
-			res := checkRWCycle(dStack)
-			dStack.pop()
-			return res
+			// dStack.push(dep, -1)
+			// res := checkRWCycle(dStack)
+			// dStack.pop()
+			return true
 		}
 	}
 	return false
-}
-
-// checkRWCycle check if the cycle does lead to a deadlock even if it contains
-// rw-locks.
-//  Args:
-//   stack (*depStack): stack representing the current chain
-//    bottom of the stack
-//  Returns:
-//    (bool): true if the cycle is valid regarding rw-locks, false otherwise
-func checkRWCycle(stack *depStack) bool {
-	// traverse through the top two dependencies in the stack
-	for _, c := range []*stackElement{stack.top.prev, stack.top} {
-		// the path can only be invalid if the lock was acquired by r-lock
-		isRead := *c.depEntry.mu.getIsRead()
-		if !isRead {
-			continue
-		}
-
-		// if c is the top element in the stack set first to the first element
-		next := c.next
-		if next == nil {
-			next = stack.stack.next
-		}
-
-		// traverse through the holding set of next
-		for i := 0; i < c.depEntry.holdingCount; i++ {
-			// if there is a lock in the holding set which is equal to c.depEntry.mu
-			// which was also acquired by read, the circle can not lead to a deadlock
-			if next.depEntry.holdingSet[i] == c.depEntry.mu {
-				if *c.depEntry.holdingSet[i].getIsRead() {
-					return false
-				}
-			}
-		}
-	}
-
-	return true
 }
