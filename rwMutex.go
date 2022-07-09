@@ -180,7 +180,7 @@ func (m *RWMutex) TryRLock() bool {
 	// call the try-lock method for the mutexInt interface
 	res := tryLockInt(m, true)
 	if res {
-		m.isRead = false
+		m.isRead = true
 	}
 	return res
 }

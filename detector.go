@@ -489,12 +489,12 @@ func isChain(stack *depStack, dep *dependency) bool {
 //  (bool): true if dep can be added to the current path to create a valid cyclic
 //   chain, false if the path is no cycle, or it contains RW-lock with which
 //   the cycle does not indicate a deadlock
-func isCycleChain(stack *depStack, dep *dependency) bool {
-	for i := 0; i < stack.stack.next.depEntry.holdingCount; i++ {
-		if stack.stack.next.depEntry.holdingSet[i] == dep.mu {
-			stack.push(dep, -1)
-			res := checkRWCycle(stack)
-			stack.pop()
+func isCycleChain(dStack *depStack, dep *dependency) bool {
+	for i := 0; i < dStack.stack.next.depEntry.holdingCount; i++ {
+		if dStack.stack.next.depEntry.holdingSet[i] == dep.mu {
+			dStack.push(dep, -1)
+			res := checkRWCycle(dStack)
+			dStack.pop()
 			return res
 		}
 	}
@@ -517,7 +517,7 @@ func checkRWCycle(stack *depStack) bool {
 			continue
 		}
 
-		// if c is the top element in tha stack set first to the first element
+		// if c is the top element in the stack set first to the first element
 		next := c.next
 		if next == nil {
 			next = stack.stack.next
@@ -528,7 +528,7 @@ func checkRWCycle(stack *depStack) bool {
 			// if there is a lock in the holding set which is equal to c.depEntry.mu
 			// which was also acquired by read, the circle can not lead to a deadlock
 			if next.depEntry.holdingSet[i] == c.depEntry.mu {
-				if *c.depEntry.holdingSet[i].getIsRead() {
+				if !*c.depEntry.holdingSet[i].getIsRead() {
 					return false
 				}
 			}
