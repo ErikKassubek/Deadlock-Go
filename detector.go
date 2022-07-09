@@ -528,7 +528,7 @@ func checkRWCycle(stack *depStack) bool {
 			// if there is a lock in the holding set which is equal to c.depEntry.mu
 			// which was also acquired by read, the circle can not lead to a deadlock
 			if next.depEntry.holdingSet[i] == c.depEntry.mu {
-				if !*c.depEntry.holdingSet[i].getIsRead() {
+				if *c.depEntry.holdingSet[i].getIsRead() {
 					return false
 				}
 			}
