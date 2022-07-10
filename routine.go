@@ -127,8 +127,10 @@ func newRoutine() {
 //  m (mutexInt): mutex to lock
 // Returns:
 //  nil
-func (r *routine) updateLock(m mutexInt) {
+func (r *routine) updateLock(m mutexInt, rLock bool) {
 	hc := r.holdingCount
+
+	m.setRLock(r.index, rLock)
 
 	isNew := false
 
@@ -281,13 +283,15 @@ func (r *routine) dependencyAlreadyExists(m mutexInt, depList *([]*dependency)) 
 //   m (mutexInt): mutex which was locked
 //  Returns:
 //   nil
-func (r *routine) updateTryLock(m mutexInt) {
+func (r *routine) updateTryLock(m mutexInt, rLock bool) {
 	// panic if the number of locks in the holding set exceeds its maximum
 	hc := r.holdingCount
 	if hc >= opts.maxNumberOfDependentLocks {
 		panic(`Holding Count is grater than maximum holding depth. Increase 
 			Opts.MaxHoldingDepth.`)
 	}
+
+	m.setRLock(r.index, rLock)
 
 	// add the lock to the holding set
 	r.holdingSet[hc] = m
@@ -302,7 +306,7 @@ func (r *routine) updateTryLock(m mutexInt) {
 func (r *routine) updateUnlock(m mutexInt) {
 	// remove m from the holding set of r
 	for i := r.holdingCount - 1; i >= 0; i-- {
-		if r.holdingSet[i] == m && r.holdingSet[i].getIsRead() == m.getIsRead() {
+		if r.holdingSet[i] == m {
 			r.holdingSet = append(r.holdingSet[:i], r.holdingSet[i+1:]...)
 			r.holdingSet = append(r.holdingSet, nil)
 			r.holdingCount--
@@ -345,8 +349,8 @@ func (r *routine) checkDoubleLocking(m mutexInt, routineIndex int, rLock bool) {
 		return
 	}
 
-	// there is no double locking if both locking are reader locks
-	if m.getIsRead() && rLock {
+	// no double locking of two reader
+	if rLock && m.getRLock(routineIndex) {
 		return
 	}
 

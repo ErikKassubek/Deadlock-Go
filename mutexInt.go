@@ -54,10 +54,10 @@ type mutexInt interface {
 	// 	if bool is true, *sync.Mutex was returned, *sync.RWMutex is nil
 	// 	if bool is false, *sync.Mutex is nil, *sync.RWMutex ware returned
 	getLock() (bool, *sync.Mutex, *sync.RWMutex)
-	//getter for isRead
-	getIsRead() bool
-	// setter for isRead
-	setIsRead(isRead bool)
+	// get whether the lock was created by an rlock
+	getRLock(routineIndex int) bool
+	// setter for rlock
+	setRLock(routineIndex int, value bool)
 }
 
 // lock the mutex or rw-mutex and update the detector data
@@ -117,9 +117,8 @@ func lockInt(m mutexInt, rLock bool) {
 
 	// update data structures if more than on routine is running
 	numRoutine := runtime.NumGoroutine()
-	m.setIsRead(rLock)
 	if numRoutine > 1 {
-		(*r).updateLock(m)
+		(*r).updateLock(m, rLock)
 	}
 }
 
@@ -164,8 +163,6 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 		}
 		index = getRoutineIndex()
 
-		m.setIsRead(rLock)
-
 		*m.getNumberLocked() += 1
 		m.getIsLockedRoutineIndexLock().Lock()
 		(*m.getIsLockedRoutineIndex())[index] += 1
@@ -181,9 +178,8 @@ func tryLockInt(m mutexInt, rLock bool) bool {
 	// was successful
 	if runtime.NumGoroutine() > 1 {
 		if res {
-			m.setIsRead(rLock)
 			r := &routines[index]
-			(*r).updateTryLock(m)
+			(*r).updateTryLock(m, rLock)
 		}
 	}
 

@@ -208,9 +208,9 @@ func dfs(stack *depStack, visiting int, isTraversed *([]bool)) {
 		for j := 0; j < routine.depCount; j++ {
 			dep := routine.dependencies[j]
 			// check if adding dep to the stack would still be a valid path
-			if isChain(stack, dep) {
+			if isChain(stack, dep, i) {
 				// check if adding dep to the stack would lead to a cycle
-				if isCycleChain(stack, dep) {
+				if isCycleChain(stack, dep, i) {
 					// report the found potential deadlock
 					stack.push(dep, j)
 					reportDeadlock(stack)
@@ -362,13 +362,13 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 
 		// check if adding dep to the current path would lead to a valid dependency
 		// chain
-		if !isChain(stack, dep) {
+		if !isChain(stack, dep, i) {
 			continue
 		}
 
 		// check if adding dep to the curring path would lead to a cyclic dependency
 		// chain. This would indicate a deadlock.
-		if isCycleChain(stack, dep) {
+		if isCycleChain(stack, dep, i) {
 			stack.push(dep, i)
 
 			// check if the last added dependency in on of the routines in the path
@@ -428,53 +428,49 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 //   stack (*depStack): stack representing the current path
 //   dep (*dependency): dependency for which it should be checked if it can be
 //    added to the path
+//   routineIndex (int): index of the routine the dependency is from
 //  Returns:
 //   (bool): true if dep can be added to the current path, false otherwise
-func isChain(stack *depStack, dep *dependency) bool {
-	// traverse all dependencies in the current path
-	for cl := stack.stack.next; cl != nil; cl = cl.next {
-		// a path cannot have the same dependency multiple times
-		if cl.depEntry == dep {
+func isChain(stack *depStack, dep *dependency, routineIndex int) bool {
+	// the mutex of the depEntry at the top of the stack mut be in the
+	// holding set of dep
+	found := false
+	for i := 0; i < dep.holdingCount; i++ {
+		mutexInHs := dep.holdingSet[i]
+		if mutexHaveEqualLock(mutexInHs, stack.top.depEntry.mu) {
+			// if mutexInHs is read, the mutex at the top of the stack can not also be read
+			if !(mutexInHs.getRLock(routineIndex) && stack.top.depEntry.mu.getRLock(stack.top.index)) {
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		return false
+	}
+
+	for c := stack.stack.next; c != nil; c = c.next {
+		// no two dependencies in the stack can be equal
+		if c.depEntry == dep {
 			return false
 		}
 
-		// two dependencies in the chain can not have the same mu
-		if cl.depEntry.mu == dep.mu {
-			return false
-		}
-
-		// pairwise compare the elements in the holding sets of the entry of the path
-		// and dep. They cannot be equal except if both are RLocks
-		for i := 0; i < cl.depEntry.holdingCount; i++ {
-			for j := 0; j < dep.holdingCount; j++ {
-				lockInStackHoldingSet := cl.depEntry.holdingSet[i]
-				lockInDepHoldingSet := dep.holdingSet[j]
-
-				if mutexHaveEqualLock(lockInStackHoldingSet, lockInDepHoldingSet) {
-					// this does not lead to a disqualification of the path if both of
-					// the locks are RLock
-					if lockInStackHoldingSet.getIsRead() && lockInDepHoldingSet.getIsRead() {
+		// If two holding sets contain the same mutex they both have to be rLock
+		// (gate lock)
+		for i := 0; i < dep.holdingCount; i++ {
+			for j := 0; j < c.depEntry.holdingCount; j++ {
+				lockInDepHs := dep.holdingSet[i]
+				lockInCHoldingSet := c.depEntry.holdingSet[j]
+				if mutexHaveEqualLock(lockInDepHs, lockInCHoldingSet) && c.index == routineIndex {
+					if !(c.depEntry.mu.getRLock(c.index) && dep.mu.getRLock(routineIndex)) {
 						return false
-
 					}
 				}
 			}
 		}
 	}
 
-	// adding dep to the current path is valid, if the lock mu of the top element
-	// in the stack (the last dependency in the current path) is in the holding set
-	// of dep
-	exists := false
-	for i := 0; i < dep.holdingCount; i++ {
-		if mutexHaveEqualLock(stack.top.depEntry.mu, dep.holdingSet[i]) {
-			exists = true
-			if dep.holdingSet[i].getIsRead() && stack.top.depEntry.mu.getIsRead() {
-				return false
-			}
-		}
-	}
-	return exists
+	return true
 }
 
 // isCycleCain checks if adding a dependency dep to the current path represented
@@ -488,18 +484,27 @@ func isChain(stack *depStack, dep *dependency) bool {
 // Args:
 //  stack (*depStack): stack representing the current path
 //  dep (*dependency): dependency for which it should be checked if adding dep
-//   to the path would lead to a cyclic path, wh
+//   to the path would lead to a cyclic path
+//  routineIndex (int): index of the routine from which dep originated
 // Returns:
 //  (bool): true if dep can be added to the current path to create a valid cyclic
 //   chain, false if the path is no cycle, or it contains RW-lock with which
 //   the cycle does not indicate a deadlock
-func isCycleChain(dStack *depStack, dep *dependency) bool {
+func isCycleChain(dStack *depStack, dep *dependency, routineIndex int) bool {
+	// the mutex dep must be in the holding set of the depEntry at the bottom of
+	// the stack
+	found := false
 	for i := 0; i < dStack.stack.next.depEntry.holdingCount; i++ {
-		if mutexHaveEqualLock(dStack.stack.next.depEntry.holdingSet[i], dep.mu) {
-			return true
+		mutexInHs := dStack.stack.next.depEntry.holdingSet[i]
+		if mutexHaveEqualLock(mutexInHs, dep.mu) {
+			// if mutexInHs is read, the mutex at the top of the stack can not also be read
+			if !(mutexInHs.getRLock(dStack.stack.index) && dep.mu.getRLock(routineIndex)) {
+				found = true
+				break
+			}
 		}
 	}
-	return false
+	return found
 }
 
 func mutexHaveEqualLock(m1, m2 mutexInt) bool {
