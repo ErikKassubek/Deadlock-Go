@@ -461,8 +461,8 @@ func isChain(stack *depStack, dep *dependency, routineIndex int) bool {
 			for j := 0; j < c.depEntry.holdingCount; j++ {
 				lockInDepHs := dep.holdingSet[i]
 				lockInCHoldingSet := c.depEntry.holdingSet[j]
-				if mutexHaveEqualLock(lockInDepHs, lockInCHoldingSet) && c.index == routineIndex {
-					if !(c.depEntry.mu.getRLock(c.index) && dep.mu.getRLock(routineIndex)) {
+				if mutexHaveEqualLock(lockInDepHs, lockInCHoldingSet) {
+					if !(lockInCHoldingSet.getRLock(c.index) && lockInDepHs.getRLock(routineIndex)) {
 						return false
 					}
 				}
