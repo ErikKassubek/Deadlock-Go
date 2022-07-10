@@ -302,7 +302,7 @@ func (r *routine) updateTryLock(m mutexInt) {
 func (r *routine) updateUnlock(m mutexInt) {
 	// remove m from the holding set of r
 	for i := r.holdingCount - 1; i >= 0; i-- {
-		if r.holdingSet[i] == m {
+		if r.holdingSet[i] == m && r.holdingSet[i].getIsRead() == m.getIsRead() {
 			r.holdingSet = append(r.holdingSet[:i], r.holdingSet[i+1:]...)
 			r.holdingSet = append(r.holdingSet, nil)
 			r.holdingCount--
@@ -346,7 +346,7 @@ func (r *routine) checkDoubleLocking(m mutexInt, routineIndex int, rLock bool) {
 	}
 
 	// there is no double locking if both locking are reader locks
-	if *m.getIsRead() && rLock {
+	if m.getIsRead() && rLock {
 		return
 	}
 

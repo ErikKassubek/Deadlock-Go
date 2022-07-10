@@ -431,22 +431,6 @@ func dfsPeriodical(stack *depStack, visiting int, isTraversed []bool,
 //  Returns:
 //   (bool): true if dep can be added to the current path, false otherwise
 func isChain(stack *depStack, dep *dependency) bool {
-	// adding dep to the current path is valid, if the lock mu of the top element
-	// in the stack (the last dependency in the current path) is in the holding set
-	// of dep
-	exists := false
-	for i := 0; i < dep.holdingCount; i++ {
-		if stack.top.depEntry.mu == dep.holdingSet[i] {
-			exists = true
-			if *dep.holdingSet[i].getIsRead() && *stack.top.depEntry.mu.getIsRead() {
-				return false
-			}
-		}
-		if !exists {
-			return false
-		}
-	}
-
 	// traverse all dependencies in the current path
 	for cl := stack.stack.next; cl != nil; cl = cl.next {
 		// a path cannot have the same dependency multiple times
@@ -466,18 +450,31 @@ func isChain(stack *depStack, dep *dependency) bool {
 				lockInStackHoldingSet := cl.depEntry.holdingSet[i]
 				lockInDepHoldingSet := dep.holdingSet[j]
 
-				if lockInStackHoldingSet == lockInDepHoldingSet {
+				if mutexHaveEqualLock(lockInStackHoldingSet, lockInDepHoldingSet) {
 					// this does not lead to a disqualification of the path if both of
 					// the locks are RLock
-					if !(*lockInStackHoldingSet.getIsRead() || *lockInDepHoldingSet.getIsRead()) {
+					if lockInStackHoldingSet.getIsRead() && lockInDepHoldingSet.getIsRead() {
 						return false
+
 					}
 				}
 			}
 		}
 	}
 
-	return true
+	// adding dep to the current path is valid, if the lock mu of the top element
+	// in the stack (the last dependency in the current path) is in the holding set
+	// of dep
+	exists := false
+	for i := 0; i < dep.holdingCount; i++ {
+		if mutexHaveEqualLock(stack.top.depEntry.mu, dep.holdingSet[i]) {
+			exists = true
+			if dep.holdingSet[i].getIsRead() && stack.top.depEntry.mu.getIsRead() {
+				return false
+			}
+		}
+	}
+	return exists
 }
 
 // isCycleCain checks if adding a dependency dep to the current path represented
@@ -498,12 +495,28 @@ func isChain(stack *depStack, dep *dependency) bool {
 //   the cycle does not indicate a deadlock
 func isCycleChain(dStack *depStack, dep *dependency) bool {
 	for i := 0; i < dStack.stack.next.depEntry.holdingCount; i++ {
-		if dStack.stack.next.depEntry.holdingSet[i] == dep.mu {
-			// dStack.push(dep, -1)
-			// res := checkRWCycle(dStack)
-			// dStack.pop()
+		if mutexHaveEqualLock(dStack.stack.next.depEntry.holdingSet[i], dep.mu) {
 			return true
 		}
 	}
+	return false
+}
+
+func mutexHaveEqualLock(m1, m2 mutexInt) bool {
+	isMutex1, mutex1, rwmutex1 := m1.getLock()
+	isMutex2, mutex2, rwmutex2 := m2.getLock()
+
+	if isMutex1 != isMutex2 {
+		return false
+	}
+
+	if isMutex1 && (mutex1 == mutex2) {
+		return true
+	}
+
+	if !isMutex1 && (rwmutex1 == rwmutex2) {
+		return true
+	}
+
 	return false
 }

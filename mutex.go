@@ -139,10 +139,14 @@ func (m *Mutex) getLock() (bool, *sync.Mutex, *sync.RWMutex) {
 // empty getter for isRead, is needed for mutexInt
 //  Returns:
 //   (*bool): false
-func (m *Mutex) getIsRead() *bool {
-	res := false
-	return &res
+func (m *Mutex) getIsRead() bool {
+	return false
 }
+
+// empty getter for isRead, is needed for mutexInt
+//  Returns:
+//   nil
+func (m *Mutex) setIsRead(isRead bool) {}
 
 // ============ FUNCTIONS ============
 

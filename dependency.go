@@ -78,16 +78,8 @@ func (d *dependency) update(lock mutexInt, hs *[]mutexInt, numberOfLocks int) {
 	// set new lock
 	d.mu = lock
 
-	// set new holding set
-	for i := 0; i < numberOfLocks; i++ {
-		d.holdingSet[i] = (*hs)[i]
-	}
-
-	// set element in d.holdingSet to nil if they were not replaced by
-	// new elements
-	for i := numberOfLocks; i < d.holdingCount; i++ {
-		d.holdingSet[i] = nil
-	}
+	// copy hs into the holding set
+	copy(d.holdingSet, *hs)
 
 	// set new holdingCount
 	d.holdingCount = numberOfLocks
