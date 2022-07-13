@@ -55,6 +55,8 @@ type RWMutex struct {
 	memoryPosition uintptr
 	// save for the routine index if the lock was locked by rLock
 	isRLock map[int]bool
+	// lock to prevent concurrent writes to isRLock
+	isRLockLock *sync.Mutex
 }
 
 // create a new rw-lock
@@ -70,6 +72,7 @@ func NewRWLock() *RWMutex {
 		isLockedRoutineIndex:     map[int]int{},
 		isLockedRoutineIndexLock: &sync.Mutex{},
 		isRLock:                  map[int]bool{},
+		isRLockLock:              &sync.Mutex{},
 	}
 
 	// save the position of the NewLock call
@@ -155,7 +158,9 @@ func (m *RWMutex) getRLock(routineIndex int) bool {
 //  Returns:
 //   nil
 func (m *RWMutex) setRLock(routineIndex int, value bool) {
+	m.isLockedRoutineIndexLock.Lock()
 	m.isRLock[routineIndex] = value
+	m.isLockedRoutineIndexLock.Unlock()
 }
 
 // ====== FUNCTIONS ============================================================
