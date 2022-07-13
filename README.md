@@ -2,8 +2,15 @@
 
 ## What
 
-Deadlock-Go implements Mutex drop-in replacements for 
-sync.Mutex and sync.Mutex with Lock, TryLock and Unlock functionality to detect potential deadlocks.
+Deadlock-Go implements Mutex and RW-Mutex drop-in replacements for 
+sync.Mutex and sync.RWMutex with (R)Lock, (R)TryLock and (R)Unlock functionality to detect potential deadlocks.
+
+The detector can detect potential or actually occurring recourse deadlocks
+which are caused by cyclic or double locking.
+
+In some cases the detector can result in false-positiv or false-negative
+results. E.g., the detector is not able to detect cyclic locking in nested 
+routines.
 
 Only works from Go Version 1.18.
 
@@ -12,12 +19,13 @@ Only works from Go Version 1.18.
 go get github.com/ErikKassubek/Deadlock-Go
 ```
 
-## Usage
+## Usage Examples
 ```
 import "github.com/ErikKassubek/Deadlock-Go"
 
 func main() {
 	defer deadlock.FindPotentialDeadlocks()
+
 	x := deadlock.NewLock()
 	y := deadlock.NewLock()
 	
@@ -50,6 +58,40 @@ import "github.com/ErikKassubek/Deadlock-Go"
 
 func main() {
 	defer deadlock.FindPotentialDeadlocks()
+
+	x := deadlock.NewRWLock()
+	y := deadlock.NewRWLock()
+	
+	// make sure, that program does not terminates
+	// before all routines have terminated
+	ch := make(chan bool, 2)
+
+	go func() {
+		x.R-Lock()
+		y.Lock()
+		y.Unlock()
+		x.RUnlock()
+		ch <- true
+	}()
+
+	go func() {
+		y.Lock()
+		x.R-Lock()
+		x.RUnlock()
+		y.Unlock()
+		ch <- true
+	}()
+	<- ch
+	<- ch
+}
+```
+
+```
+import "github.com/ErikKassubek/Deadlock-Go"
+
+func main() {
+	defer deadlock.FindPotentialDeadlocks()
+
 	x := NewRWLock()
 	y := NewRWLock()
 
@@ -141,3 +183,13 @@ Additionally the maximum numbers for the dependencies per Routine (default: 4096
 the maximum number of mutexes a mutex can depend on (default: 128), 
 the maximum number of routines (default: 1024) and the maximum 
 length of a collected call stack in bytes (default 2048) can be set.  
+
+## Acknowledgement
+The detector is partially based on:
+```
+J. Zhou, S. Silvestro, H. Liu, Y. Cai und T. Liu, „UNDEAD: Detecting and preventing
+deadlocks in production software“, in 2017 32nd IEEE/ACM International Conference
+on Automated Software Engineering (ASE), Los Alamitos, CA, USA: IEEE Computer
+Society, Nov. 2017, S. 729–740. doi: 10.1109/ASE.2017.8115684.
+```
+
