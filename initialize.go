@@ -44,6 +44,9 @@ var initialized = false
 func initialize() {
 	initialized = true
 
+	// reinitialize routines to set size
+	routines = make([]routine, opts.maxRoutines)
+
 	// return if periodical detection is disabled
 	if !opts.periodicDetection {
 		return
