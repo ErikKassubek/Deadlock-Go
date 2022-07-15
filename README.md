@@ -1,3 +1,11 @@
+<!-- 
+Copyright (C) 2022  Erik Kassubek 
+
+Author: Erik Kassubek <erik-kassubek@t-online.de>
+Project: Bachelor Project at the Albert-Ludwigs-University Freiburg,
+	Institute of Computer Science: Dynamic Deadlock Detection in Go
+-->
+
 # Deadlock-Go: Dynamic Deadlock Detection in Go
 
 ## What
@@ -64,7 +72,7 @@ func main() {
 	x := NewRWLock()
 	y := NewRWLock()
 
-  // make sure, that the program does not terminate
+	// make sure, that the program does not terminate
 	// before all routines have terminated
 	ch := make(chan bool, 2)
 
