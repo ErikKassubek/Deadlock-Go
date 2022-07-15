@@ -20,6 +20,7 @@ go get github.com/ErikKassubek/Deadlock-Go
 ```
 
 ## Usage Examples
+### Example for Mutex
 ```
 import "github.com/ErikKassubek/Deadlock-Go"
 
@@ -53,39 +54,7 @@ func main() {
 }
 ```
 
-```
-import "github.com/ErikKassubek/Deadlock-Go"
-
-func main() {
-	defer deadlock.FindPotentialDeadlocks()
-
-	x := deadlock.NewRWLock()
-	y := deadlock.NewRWLock()
-	
-	// make sure, that program does not terminates
-	// before all routines have terminated
-	ch := make(chan bool, 2)
-
-	go func() {
-		x.R-Lock()
-		y.Lock()
-		y.Unlock()
-		x.RUnlock()
-		ch <- true
-	}()
-
-	go func() {
-		y.Lock()
-		x.R-Lock()
-		x.RUnlock()
-		y.Unlock()
-		ch <- true
-	}()
-	<- ch
-	<- ch
-}
-```
-
+### Example for RW-Mutex
 ```
 import "github.com/ErikKassubek/Deadlock-Go"
 
@@ -95,6 +64,8 @@ func main() {
 	x := NewRWLock()
 	y := NewRWLock()
 
+  // make sure, that the program does not terminate
+	// before all routines have terminated
 	ch := make(chan bool, 2)
 
 	go func() {
