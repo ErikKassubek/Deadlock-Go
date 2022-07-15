@@ -35,6 +35,8 @@ import "time"
 
 // opts controls how the detection behaves
 var opts = struct {
+	// if deactivated is false, there is no detection
+	activated bool
 	// If periodicDetection is set to false, periodic detection is disabled
 	periodicDetection bool
 	// If comprehensiveDetection is set to false, comprehensive detection at
@@ -61,6 +63,7 @@ var opts = struct {
 	// The maximum byte size for callStacks
 	maxCallStackSize int
 }{
+	activated:                   true,
 	periodicDetection:           true,
 	comprehensiveDetection:      true,
 	periodicDetectionTime:       time.Second * 2,
@@ -71,6 +74,23 @@ var opts = struct {
 	maxNumberOfDependentLocks:   128,
 	maxRoutines:                 1024,
 	maxCallStackSize:            2048,
+}
+
+// Enable or disable all detections
+// It is not possible to set options after the detector was initialized
+//  Args:
+//   enable (bool): true to enable, false to disable
+//  Returns:
+//   (bool): true, if the set was successful, false otherwise
+func SetActivated(enable bool) bool {
+	if initialized {
+		return false
+	}
+	opts.activated = enable
+	opts.checkDoubleLocking = true
+	opts.periodicDetection = true
+	opts.comprehensiveDetection = true
+	return true
 }
 
 // Enable or disable periodic detection
@@ -84,6 +104,7 @@ func SetPeriodicDetection(enable bool) bool {
 		return false
 	}
 	opts.periodicDetection = enable
+	setActivatedAuto()
 	return true
 }
 
@@ -98,6 +119,7 @@ func SetComprehensiveDetection(enable bool) bool {
 		return false
 	}
 	opts.comprehensiveDetection = enable
+	setActivatedAuto()
 	return true
 }
 
@@ -156,6 +178,7 @@ func SetDoubleLockingDetection(enable bool) bool {
 		return false
 	}
 	opts.checkDoubleLocking = enable
+	setActivatedAuto()
 	return true
 }
 
@@ -213,4 +236,16 @@ func SetMaxCallStackSize(number int) bool {
 	}
 	opts.maxCallStackSize = number
 	return true
+}
+
+// automatically set activated according to the other options
+//  Returns:
+//   nil
+func setActivatedAuto() {
+	if !(opts.periodicDetection || opts.checkDoubleLocking || opts.comprehensiveDetection) {
+		opts.activated = false
+		return
+	}
+	opts.activated = true
+
 }

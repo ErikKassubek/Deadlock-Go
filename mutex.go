@@ -167,7 +167,9 @@ func (m *Mutex) TryLock() bool {
 //  Returns:
 //   nil
 func (m *Mutex) Unlock() {
-	// call the unlock method for the mutexInt interface
-	unlockInt(m)
+	if opts.activated {
+		// call the unlock method for the mutexInt interface
+		unlockInt(m)
+	}
 	m.mu.Unlock()
 }

@@ -163,6 +163,7 @@ Calls of lock involved in deadlock:
 ## Options
 The behavior of Deadlock-Go can be influenced by different options.
 They have to be set before the first lock was initialized.
+```SetActivated(enable bool)```: enable or disable all detections at once
 
 ```SetPeriodicDetection(enable bool)```: enable or disable periodical detection, default: enabled
 

@@ -203,13 +203,17 @@ func (m *RWMutex) RTryLock() bool {
 //  Returns:
 //   nil
 func (m *RWMutex) Unlock() {
-	unlockInt(m)
+	if opts.activated {
+		unlockInt(m)
+	}
 	m.mu.Unlock()
 }
 
 // Unlock rw-mutex m
 //  Returns: nil
 func (m *RWMutex) RUnlock() {
-	unlockInt(m)
+	if opts.activated {
+		unlockInt(m)
+	}
 	m.mu.RUnlock()
 }

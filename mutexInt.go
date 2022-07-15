@@ -67,6 +67,23 @@ type mutexInt interface {
 //  Returns:
 //   nil
 func lockInt(m mutexInt, rLock bool) {
+	// do only the operation if detection is completely deactivated
+	if !opts.activated {
+		d, l, t := m.getLock()
+		if d {
+			// lock if m is mutex
+			l.Lock()
+		} else {
+			// lock if m is rw-mutex
+			if rLock {
+				t.RLock()
+			} else {
+				t.Lock()
+			}
+		}
+		return
+	}
+
 	// panic if the lock was not initialized
 	if !*m.getIn() {
 		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
@@ -130,6 +147,24 @@ func lockInt(m mutexInt, rLock bool) {
 //  Returns:
 //   (bool): true if the acquisition was successful, false otherwise
 func tryLockInt(m mutexInt, rLock bool) bool {
+	// do only the operation if detection is completely deactivated
+	if !opts.activated {
+		d, l, t := m.getLock()
+		var res bool
+		if d {
+			// lock if m is mutex
+			res = l.TryLock()
+		} else {
+			// lock if m is rw-mutex
+			if rLock {
+				res = t.TryRLock()
+			} else {
+				res = t.TryLock()
+			}
+		}
+		return res
+	}
+
 	// panic if the lock was not initialized
 	if !*m.getIn() {
 		errorMessage := fmt.Sprint("Lock ", &m, " was not created. Use ",
