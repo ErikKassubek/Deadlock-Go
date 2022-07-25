@@ -116,10 +116,10 @@ func newRoutine() {
 	createRoutineLock.Unlock()
 
 	// allocate the dependency list
-	for i := 0; i < opts.maxDependencies; i++ {
-		dep := newDependency(nil, nil, 0)
-		r.dependencies[i] = &dep
-	}
+	// for i := 0; i < opts.maxDependencies; i++ {
+	// 	dep := newDependency(nil, nil, 0)
+	// 	r.dependencies[i] = &dep
+	// }
 }
 
 // Update the routine structure if a mutex is locked
@@ -142,7 +142,6 @@ func (r *routine) updateLock(m mutexInt, rLock bool) {
 		key := m.getMemoryPosition() ^ r.holdingSet[hc-1].getMemoryPosition()
 
 		depMap := r.dependencyMap
-		var dep *dependency
 
 		// check if the key already exists in depMap
 		d, ok := depMap[key]
@@ -161,20 +160,21 @@ func (r *routine) updateLock(m mutexInt, rLock bool) {
 				panic(panicMassage)
 			}
 			// add the new dependency to the lock tree
-			dep = r.dependencies[r.depCount]
+			dep := newDependency(m, r.holdingSet, hc)
+			r.dependencies[r.depCount] = &dep
 			dep.update(m, &r.holdingSet, hc)
 			r.depCount++
 
 			// add the dependency to the dependencyMap
 			if d != nil {
-				*d = append(*d, dep)
+				*d = append(*d, &dep)
 			} else {
-				d = &[]*dependency{dep}
+				d = &[]*dependency{&dep}
 			}
 			r.dependencyMap[key] = d
 
 			// set the last added dependency pf the tree
-			r.curDep = dep
+			r.curDep = &dep
 
 			isNew = true
 		}
