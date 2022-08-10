@@ -37,7 +37,6 @@ import (
 
 // Type to implement a lock
 // It can be used as an drop in replacement
-// TODO: check if this can be lowercase
 type Mutex struct {
 	// mutex for the actual locking
 	mu *sync.Mutex
